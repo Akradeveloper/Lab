@@ -15,7 +15,7 @@ Web tipo FreeCodeCamp enfocada en QA: autenticación con roles **alumno** y **ad
 3. (Opcional) Crear admin de prueba: `npx prisma db seed`
 4. Servidor de desarrollo: `npm run dev`
 
-Abre [http://localhost:3000](http://localhost:3000).
+Abre [http://localhost:3000](http://localhost:3000) (o el puerto que indique Next.js).
 
 ## Usuario admin de prueba (tras `db seed`)
 
@@ -24,37 +24,19 @@ Abre [http://localhost:3000](http://localhost:3000).
 
 Los nuevos registros son **alumnos**. Solo el admin puede entrar en `/admin` y ver el listado de alumnos y su progreso.
 
-## Getting Started
+## Documentación
 
-First, run the development server:
+La documentación del proyecto (getting started, arquitectura, contribución) está en **Docusaurus** dentro de la carpeta `website/`:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Instalar: `cd website && npm install`
+- Ver en local: `cd website && npm run start`
+- Build: `cd website && npm run build`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Ramas (flujo de desarrollo)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **master**: código estable / producción.
+- **develop**: integración; las features se fusionan aquí.
+- **feature/***: nuevas funcionalidades (crear desde `develop`, PR a `develop`).
+- **fix/***: correcciones de bugs (desde `develop`, PR a `develop`).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Los Pull Request se abren contra `develop` y se usa la plantilla en `.github/PULL_REQUEST_TEMPLATE.md`. Detalles en [website/docs/contributing.md](website/docs/contributing.md).
