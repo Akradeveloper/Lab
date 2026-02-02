@@ -26,6 +26,44 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Garantizar tema oscuro: utilidades que usan las variables por si Tailwind no genera las clases */
+@layer utilities {
+  .bg-background {
+    background-color: var(--background) !important;
+  }
+  .bg-surface {
+    background-color: var(--surface) !important;
+  }
+  .text-foreground {
+    color: var(--foreground) !important;
+  }
+  .text-muted {
+    color: var(--muted) !important;
+  }
+  .border-border {
+    border-color: var(--border) !important;
+  }
+  .bg-accent {
+    background-color: var(--accent) !important;
+  }
+  .text-accent-foreground {
+    color: var(--accent-foreground) !important;
+  }
+  .text-error {
+    color: var(--error) !important;
+  }
+  .bg-error-bg {
+    background-color: var(--error-bg) !important;
+  }
+  .ring-offset-background {
+    --tw-ring-offset-color: var(--background);
+  }
+}
+
+html {
+  background-color: var(--background);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
