@@ -4,11 +4,13 @@ import { getSession, signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { Spinner } from "@/components/Spinner";
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
+  const registered = searchParams.get("registered") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -42,56 +44,75 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h1 className="mb-6 text-xl font-semibold">Iniciar sesión</h1>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-6 shadow-lg shadow-black/20">
+        <h1 className="mb-6 text-xl font-semibold text-foreground">
+          Iniciar sesión
+        </h1>
+        {registered && (
+          <p className="mb-4 rounded border border-accent/50 bg-accent/10 px-3 py-2 text-sm text-accent">
+            Cuenta creada. Inicia sesión.
+          </p>
+        )}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {error && (
-            <p className="rounded bg-red-100 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
+            <p className="rounded bg-error-bg px-3 py-2 text-sm text-error">
               {error}
             </p>
           )}
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Email</span>
+            <span className="text-sm font-medium text-foreground">Email</span>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800"
+              className="rounded-md border border-border bg-background px-3 py-2 text-foreground transition-colors duration-200 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
               autoComplete="email"
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Contraseña</span>
+            <span className="text-sm font-medium text-foreground">
+              Contraseña
+            </span>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-600 dark:bg-zinc-800"
+              className="rounded-md border border-border bg-background px-3 py-2 text-foreground transition-colors duration-200 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
               autoComplete="current-password"
             />
           </label>
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 rounded bg-zinc-900 py-2 font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-accent py-2 font-medium text-accent-foreground transition-colors duration-200 hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            {loading ? "Entrando…" : "Entrar"}
+            {loading ? (
+              <>
+                <Spinner className="h-4 w-4" />
+                Entrando…
+              </>
+            ) : (
+              "Entrar"
+            )}
           </button>
         </form>
-        <p className="mt-4 text-center text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="mt-4 text-center text-sm text-muted">
           ¿No tienes cuenta?{" "}
           <Link
             href="/register"
-            className="font-medium text-zinc-900 dark:text-zinc-100"
+            className="font-medium text-foreground transition-colors duration-200 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
           >
             Regístrate
           </Link>
         </p>
         <p className="mt-2 text-center">
-          <Link href="/" className="text-sm text-zinc-500 hover:underline">
+          <Link
+            href="/"
+            className="text-sm text-muted transition-colors duration-200 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
+          >
             Volver al inicio
           </Link>
         </p>

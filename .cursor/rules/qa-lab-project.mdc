@@ -12,3 +12,4 @@ alwaysApply: true
 - **Rutas:** `/` (home), `/login`, `/register`, `/dashboard` (alumno), `/admin` (admin). APIs: `/api/auth/[...nextauth]`, `/api/auth/register`, `/api/admin/students`.
 - **Base de datos:** SQLite en `prisma/dev.db`. Modelo User (id, email, passwordHash, name, role, createdAt) y Progress (id, userId, courseId, lessonId, completedAt). Relación User 1-N Progress.
 - **Auth:** NextAuth con `secret: process.env.NEXTAUTH_SECRET`. Variables: DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL.
+- **Ramas:** Todo desarrollo debe hacerse en una rama propia. No commitear directamente en `master` ni en `develop`. Crear `feature/nombre` o `fix/nombre` desde `develop` para cada cambio; los PR se abren hacia `develop`. Hacer merge a `develop` solo cuando el objetivo de la feature o fix esté terminado; no mergear a medias.
