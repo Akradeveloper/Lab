@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Subproyecto Docusaurus (config y builds propios)
+    "website/**",
   ]),
 ]);
 

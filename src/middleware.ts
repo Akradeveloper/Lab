@@ -11,7 +11,9 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Rutas protegidas: requieren sesión
-  if (pathname.startsWith("/dashboard") || pathname.startsWith("/admin")) {
+  const protectedPaths = ["/dashboard", "/admin", "/modulos", "/mi-carrera", "/perfil"];
+  const isProtected = protectedPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  if (isProtected) {
     if (!token) {
       const login = new URL("/login", request.url);
       login.searchParams.set("callbackUrl", pathname);
@@ -27,5 +29,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*"],
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/modulos/:path*", "/mi-carrera/:path*", "/perfil/:path*"],
 };

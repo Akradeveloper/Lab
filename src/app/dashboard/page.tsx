@@ -4,6 +4,11 @@ import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { Header } from "@/components/Header";
 
+export const metadata = {
+  title: "Inicio - QA Lab",
+  description: "Área del alumno",
+};
+
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
@@ -11,7 +16,7 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <div className="mx-auto max-w-2xl px-4 py-8">
+      <main id="main-content" className="mx-auto max-w-2xl px-4 py-8">
         <h1 className="mb-6 text-2xl font-semibold text-foreground">
           Área del alumno
         </h1>
@@ -28,7 +33,7 @@ export default async function DashboardPage() {
             Volver al inicio
           </Link>
         </p>
-      </div>
+      </main>
     </div>
   );
 }

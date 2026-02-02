@@ -38,7 +38,10 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
+    <main
+      id="main-content"
+      className="flex min-h-screen flex-col items-center justify-center bg-background px-4"
+    >
       <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-6 shadow-lg shadow-black/20">
         <h1 className="mb-6 text-xl font-semibold text-foreground">
           Crear cuenta
@@ -49,9 +52,10 @@ export default function RegisterPage() {
               {error}
             </p>
           )}
-          <label className="flex flex-col gap-1">
+          <label htmlFor="register-name" className="flex flex-col gap-1">
             <span className="text-sm font-medium text-foreground">Nombre</span>
             <input
+              id="register-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -60,9 +64,10 @@ export default function RegisterPage() {
               autoComplete="name"
             />
           </label>
-          <label className="flex flex-col gap-1">
+          <label htmlFor="register-email" className="flex flex-col gap-1">
             <span className="text-sm font-medium text-foreground">Email</span>
             <input
+              id="register-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -71,11 +76,12 @@ export default function RegisterPage() {
               autoComplete="email"
             />
           </label>
-          <label className="flex flex-col gap-1">
+          <label htmlFor="register-password" className="flex flex-col gap-1">
             <span className="text-sm font-medium text-foreground">
               Contraseña (mín. 6)
             </span>
             <input
+              id="register-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -118,6 +124,6 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
-    </div>
+    </main>
   );
 }

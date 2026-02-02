@@ -15,6 +15,7 @@
 
 ## Checklist
 
+- [ ] Esta rama es `feature/*` o `fix/*` y el PR va hacia `develop`
 - [ ] No hay `console.log` innecesarios
 - [ ] Documentación actualizada si aplica (website/docs o README)
 - [ ] Código en español (mensajes, comentarios, UI)

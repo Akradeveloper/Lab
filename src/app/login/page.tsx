@@ -44,7 +44,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
+    <main
+      id="main-content"
+      className="flex min-h-screen flex-col items-center justify-center bg-background px-4"
+    >
       <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-6 shadow-lg shadow-black/20">
         <h1 className="mb-6 text-xl font-semibold text-foreground">
           Iniciar sesión
@@ -60,9 +63,10 @@ export default function LoginPage() {
               {error}
             </p>
           )}
-          <label className="flex flex-col gap-1">
+          <label htmlFor="login-email" className="flex flex-col gap-1">
             <span className="text-sm font-medium text-foreground">Email</span>
             <input
+              id="login-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -71,11 +75,12 @@ export default function LoginPage() {
               autoComplete="email"
             />
           </label>
-          <label className="flex flex-col gap-1">
+          <label htmlFor="login-password" className="flex flex-col gap-1">
             <span className="text-sm font-medium text-foreground">
               Contraseña
             </span>
             <input
+              id="login-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -117,6 +122,6 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
-    </div>
+    </main>
   );
 }

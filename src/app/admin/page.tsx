@@ -5,6 +5,11 @@ import { authOptions } from "@/lib/auth";
 import { Header } from "@/components/Header";
 import { AdminStudentsTable } from "./admin-students-table";
 
+export const metadata = {
+  title: "Panel de administración - QA Lab",
+  description: "Gestión de alumnos y progreso",
+};
+
 export default async function AdminPage() {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ADMIN") redirect("/dashboard");
@@ -12,7 +17,7 @@ export default async function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <div className="mx-auto max-w-4xl px-4 py-8">
+      <main id="main-content" className="mx-auto max-w-4xl px-4 py-8">
         <h1 className="mb-2 text-2xl font-semibold text-foreground">
           Panel de administración
         </h1>
@@ -26,7 +31,7 @@ export default async function AdminPage() {
             Volver al inicio
           </Link>
         </p>
-      </div>
+      </main>
     </div>
   );
 }
