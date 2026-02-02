@@ -32,3 +32,40 @@ model Progress {
   completedAt DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+enum ExerciseType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  lessons     Lesson[]
+}
+
+model Lesson {
+  id        String    @id @default(cuid())
+  moduleId  String
+  title     String
+  content   String    @default("")
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
+  module    Module    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  exercises Exercise[]
+}
+
+model Exercise {
+  id            String       @id @default(cuid())
+  lessonId      String
+  type          ExerciseType
+  question      String
+  options       String       // JSON array for multiple choice; for TRUE_FALSE can be "[\"Verdadero\",\"Falso\"]"
+  correctAnswer String       // JSON: index (number) for MULTIPLE_CHOICE, "true"/"false" for TRUE_FALSE
+  order         Int          @default(0)
+  createdAt     DateTime     @default(now())
+  lesson        Lesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+}

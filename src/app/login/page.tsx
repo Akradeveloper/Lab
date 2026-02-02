@@ -3,10 +3,10 @@
 import { getSession, signIn } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Spinner } from "@/components/Spinner";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
@@ -123,5 +123,25 @@ export default function LoginPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main
+          id="main-content"
+          className="flex min-h-screen flex-col items-center justify-center bg-background px-4"
+        >
+          <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-6 text-center">
+            <Spinner className="mx-auto h-8 w-8 text-muted" />
+            <p className="mt-4 text-sm text-muted">Cargando…</p>
+          </div>
+        </main>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
