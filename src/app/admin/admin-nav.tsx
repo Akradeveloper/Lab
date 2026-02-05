@@ -7,6 +7,7 @@ const links = [
   { href: "/admin", label: "Inicio" },
   { href: "/admin/alumnos", label: "Alumnos" },
   { href: "/admin/curriculum", label: "Currículo" },
+  { href: "/admin/base-de-datos", label: "Base de datos" },
 ] as const;
 
 const baseClass =

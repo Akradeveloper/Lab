@@ -58,6 +58,28 @@ export default function AdminPage() {
             Gestionar currículo
           </Link>
         </section>
+
+        <section
+          className="rounded-lg border border-border bg-surface p-6"
+          aria-labelledby="admin-base-de-datos-heading"
+        >
+          <h2
+            id="admin-base-de-datos-heading"
+            className="mb-2 text-xl font-semibold text-foreground"
+          >
+            Base de datos
+          </h2>
+          <p className="mb-6 text-muted">
+            Descarga un backup de la BD o restaura desde un archivo .db sin usar
+            scripts.
+          </p>
+          <Link
+            href="/admin/base-de-datos"
+            className="inline-block rounded border border-accent bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            Gestionar backup
+          </Link>
+        </section>
       </div>
     </>
   );

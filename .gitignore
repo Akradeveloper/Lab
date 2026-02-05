@@ -20,15 +20,36 @@
 # production
 /build
 
+# backups (no versionar copias de la BD)
+backups/
+
+# databases (SQLite)
+*.db
+
 # misc
 .DS_Store
 *.pem
+*.local
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+
+# caches
+.eslintcache
+.turbo
+.cache
+
+# IDE / editors
+.idea/
+.vscode/
+
+# OS (Windows)
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # env files (can opt-in for committing if needed)
 .env*
