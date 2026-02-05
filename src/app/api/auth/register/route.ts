@@ -51,7 +51,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (e) {
-    console.error(e);
+    if (process.env.NODE_ENV !== "production") {
+      console.error("Error en registro:", e);
+    }
     return NextResponse.json(
       { error: "Error al registrar" },
       { status: 500 }

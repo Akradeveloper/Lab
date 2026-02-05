@@ -32,3 +32,55 @@ model Progress {
   completedAt DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+enum ExerciseType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  CODE
+}
+
+model Module {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  order       Int         @default(0)
+  createdAt   DateTime    @default(now())
+  submodules  Submodule[]
+  lessons     Lesson[]
+}
+
+model Submodule {
+  id          String   @id @default(cuid())
+  moduleId    String
+  title       String
+  description String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  lessons     Lesson[]
+}
+
+model Lesson {
+  id           String     @id @default(cuid())
+  moduleId     String?
+  submoduleId  String?
+  title        String
+  content      String     @default("")
+  order        Int        @default(0)
+  createdAt    DateTime   @default(now())
+  module       Module?    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  submodule    Submodule? @relation(fields: [submoduleId], references: [id], onDelete: Cascade)
+  exercises    Exercise[]
+}
+
+model Exercise {
+  id            String       @id @default(cuid())
+  lessonId      String
+  type          ExerciseType
+  question      String
+  options       String       // JSON: MULTIPLE_CHOICE/TRUE_FALSE = array of options; CODE = { language, template, testCases }
+  correctAnswer String       // JSON: MULTIPLE_CHOICE = index (number), TRUE_FALSE = boolean, CODE = "" or reserved
+  order         Int          @default(0)
+  createdAt     DateTime     @default(now())
+  lesson        Lesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,14 @@
+---
+description: Convenciones de código para la app QA Lab
+globs: src/**/*.ts,src/**/*.tsx
+alwaysApply: false
+---
+
+# Convenciones de código (src/)
+
+- Usar componentes funcionales en React.
+- Imports con alias `@/` (ej. `@/lib/prisma`, `@/lib/auth`).
+- Respetar estructura: `src/app/` (rutas y páginas), `src/lib/` (auth, prisma, utilidades), `src/types/` (tipos y ampliaciones).
+- No dejar `console.log` innecesarios en código que vaya a producción.
+- Mensajes de error, etiquetas de UI y comentarios en **español**.
+- API routes: validar body y devolver códigos HTTP adecuados (400, 403, 409, 500). Comprobar sesión/rol en rutas admin.

@@ -36,7 +36,7 @@ export function AdminStudentsTable() {
 
   if (loading) {
     return (
-      <p className="rounded border border-zinc-200 px-4 py-8 text-center text-zinc-500 dark:border-zinc-700">
+      <p className="rounded border border-border px-4 py-8 text-center text-muted">
         Cargando…
       </p>
     );
@@ -44,7 +44,7 @@ export function AdminStudentsTable() {
 
   if (error) {
     return (
-      <p className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+      <p className="rounded border border-error bg-error-bg px-4 py-3 text-error">
         {error}
       </p>
     );
@@ -52,7 +52,7 @@ export function AdminStudentsTable() {
 
   if (students.length === 0) {
     return (
-      <p className="rounded border border-zinc-200 px-4 py-8 text-center text-zinc-500 dark:border-zinc-700">
+      <p className="rounded border border-border px-4 py-8 text-center text-muted">
         No hay alumnos registrados todavía.
       </p>
     );
@@ -71,28 +71,32 @@ export function AdminStudentsTable() {
   }
 
   return (
-    <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-700">
+    <div className="overflow-x-auto rounded-lg border border-border">
       <table className="w-full min-w-[500px] text-left text-sm">
-        <thead className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/50">
+        <thead className="border-b border-border bg-surface">
           <tr>
-            <th className="px-4 py-3 font-medium">Alumno</th>
-            <th className="px-4 py-3 font-medium">Email</th>
-            <th className="px-4 py-3 font-medium">Lecciones completadas</th>
-            <th className="px-4 py-3 font-medium">Última actividad</th>
+            <th className="px-4 py-3 font-medium text-foreground">Alumno</th>
+            <th className="px-4 py-3 font-medium text-foreground">Email</th>
+            <th className="px-4 py-3 font-medium text-foreground">
+              Lecciones completadas
+            </th>
+            <th className="px-4 py-3 font-medium text-foreground">
+              Última actividad
+            </th>
           </tr>
         </thead>
         <tbody>
           {students.map((s) => (
             <tr
               key={s.id}
-              className="border-b border-zinc-100 dark:border-zinc-700/50"
+              className="border-b border-border transition-colors duration-150 last:border-b-0 hover:bg-surface/80"
             >
-              <td className="px-4 py-3">{s.name}</td>
-              <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-                {s.email}
+              <td className="px-4 py-3 text-foreground">{s.name}</td>
+              <td className="px-4 py-3 text-muted">{s.email}</td>
+              <td className="px-4 py-3 text-foreground">
+                {s.lessonsCompleted}
               </td>
-              <td className="px-4 py-3">{s.lessonsCompleted}</td>
-              <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
+              <td className="px-4 py-3 text-muted">
                 {formatDate(s.lastActivity)}
               </td>
             </tr>
