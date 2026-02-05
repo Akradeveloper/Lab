@@ -6,8 +6,10 @@ const config: Config = {
   title: 'QA Lab',
   tagline: 'Aprende Testing y QA paso a paso',
   favicon: 'img/favicon.ico',
+  // Para GitHub Pages (project site): sustituye por tu usuario/org. Ej: https://MiUsuario.github.io
   url: 'https://tu-usuario.github.io',
-  baseUrl: '/',
+  // baseUrl debe ser /<nombre-repo>/ para project site. Ej: /Lab/
+  baseUrl: '/Lab/',
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
   i18n: {
