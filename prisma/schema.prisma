@@ -24,6 +24,8 @@ model User {
   progress             Progress[]
   lessonCheckAttempts  LessonCheckAttempt[]
   exerciseAttempts     ExerciseAttempt[]
+
+  @@map("user")
 }
 
 model Progress {
@@ -33,6 +35,8 @@ model Progress {
   lessonId    String
   completedAt DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("progress")
 }
 
 enum ExerciseType {
@@ -57,6 +61,8 @@ model Module {
   createdAt   DateTime    @default(now())
   submodules  Submodule[]
   lessons     Lesson[]
+
+  @@map("module")
 }
 
 model Submodule {
@@ -68,6 +74,8 @@ model Submodule {
   createdAt   DateTime @default(now())
   module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   lessons     Lesson[]
+
+  @@map("submodule")
 }
 
 model Lesson {
@@ -82,6 +90,8 @@ model Lesson {
   module       Module?         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   submodule    Submodule?      @relation(fields: [submoduleId], references: [id], onDelete: Cascade)
   exercises    Exercise[]
+
+  @@map("lesson")
 }
 
 model Exercise {
@@ -95,6 +105,8 @@ model Exercise {
   createdAt       DateTime          @default(now())
   lesson          Lesson            @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   exerciseAttempts ExerciseAttempt[]
+
+  @@map("exercise")
 }
 
 model LessonCheckAttempt {
@@ -104,6 +116,8 @@ model LessonCheckAttempt {
   allCorrect  Boolean
   createdAt   DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("lessoncheckattempt")
 }
 
 model ExerciseAttempt {
@@ -115,4 +129,6 @@ model ExerciseAttempt {
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@map("exerciseattempt")
 }
