@@ -1,8 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
-import { env } from "@/lib/env";
+import { getPrismaAdapterConfig } from "@/lib/database-url";
 
-const adapter = new PrismaMariaDb(env.DATABASE_URL);
+const adapter = new PrismaMariaDb(getPrismaAdapterConfig());
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 export const prisma =
