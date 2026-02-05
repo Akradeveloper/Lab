@@ -41,6 +41,14 @@ enum ExerciseType {
   CODE
 }
 
+enum DifficultyLevel {
+  APRENDIZ
+  JUNIOR
+  MID
+  SENIOR
+  ESPECIALISTA
+}
+
 model Module {
   id          String      @id @default(cuid())
   title       String
@@ -63,15 +71,16 @@ model Submodule {
 }
 
 model Lesson {
-  id           String     @id @default(cuid())
+  id           String          @id @default(cuid())
   moduleId     String?
   submoduleId  String?
   title        String
-  content      String     @default("")
-  order        Int        @default(0)
-  createdAt    DateTime   @default(now())
-  module       Module?    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  submodule    Submodule? @relation(fields: [submoduleId], references: [id], onDelete: Cascade)
+  content      String          @default("")
+  order        Int             @default(0)
+  difficulty   DifficultyLevel?
+  createdAt    DateTime        @default(now())
+  module       Module?         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  submodule    Submodule?      @relation(fields: [submoduleId], references: [id], onDelete: Cascade)
   exercises    Exercise[]
 }
 
