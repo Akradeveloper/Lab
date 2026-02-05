@@ -28,6 +28,17 @@ Abre [http://localhost:3000](http://localhost:3000) (o el puerto que indique Nex
 
 Los nuevos registros son **alumnos**. Solo el admin puede entrar en `/admin` y ver el listado de alumnos y su progreso.
 
+## Backup de la base de datos
+
+Puedes hacer backup y restaurar de dos formas:
+
+- **Desde el panel admin**: en **Admin → Base de datos** puedes descargar un backup (archivo .db) y subir un archivo .db para restaurar, sin usar la terminal.
+- **Con scripts**: antes de desplegar (o periódicamente), ejecuta `npm run db:backup`. Se creará un archivo en `backups/` con fecha y hora. Para restaurar (con la aplicación parada): `npm run db:restore -- backups/backup-YYYY-MM-DDTHH-mm-ss.db` (o sin argumento para usar el backup más reciente).
+
+Guarda el archivo de backup en un lugar persistente (copia en tu máquina, artefacto de CI, almacenamiento en la nube) si el servidor de despliegue tiene disco efímero.
+
+En entornos donde el disco se borra en cada despliegue (por ejemplo muchos PaaS), tendrás que ejecutar la restauración después de cada despliegue desde ese archivo guardado, o valorar un servicio de base de datos persistente (por ejemplo Turso para SQLite en la nube).
+
 ## Documentación
 
 La documentación del proyecto (getting started, arquitectura, contribución) está en **Docusaurus** dentro de la carpeta `website/`:
