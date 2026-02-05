@@ -1,15 +1,35 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+
+type DbType = "sqlite" | "mysql";
 
 export default function AdminBaseDeDatosPage() {
+  const [dbType, setDbType] = useState<DbType | null>(null);
   const [restoreStatus, setRestoreStatus] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
   const [restoring, setRestoring] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/db/type", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.database === "mysql" || data?.database === "sqlite") {
+          setDbType(data.database);
+        } else {
+          setDbType("sqlite");
+        }
+      })
+      .catch(() => setDbType("sqlite"));
+  }, []);
+
+  const isMySQL = dbType === "mysql";
+  const backupExt = isMySQL ? ".json" : ".db";
+  const acceptExt = isMySQL ? ".json" : ".db";
 
   async function handleRestoreSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -18,7 +38,7 @@ export default function AdminBaseDeDatosPage() {
     const fileInput =
       form.querySelector<HTMLInputElement>('input[name="file"]');
     if (!fileInput?.files?.length) {
-      setRestoreStatus({ type: "error", message: "Selecciona un archivo .db" });
+      setRestoreStatus({ type: "error", message: `Selecciona un archivo ${backupExt}` });
       return;
     }
     setRestoring(true);
@@ -59,8 +79,8 @@ export default function AdminBaseDeDatosPage() {
         Base de datos
       </h1>
       <p className="mb-8 text-muted">
-        Descarga una copia de la base de datos o restaura desde un archivo .db
-        guardado.
+        Descarga una copia de la base de datos o restaura desde un archivo{" "}
+        {dbType ? backupExt : ".db o .json"} guardado.
       </p>
 
       <div className="grid gap-6 sm:grid-cols-2">
@@ -75,12 +95,12 @@ export default function AdminBaseDeDatosPage() {
             Descargar backup
           </h2>
           <p className="mb-6 text-muted">
-            Guarda una copia de la base de datos en tu equipo. El archivo
-            incluirá la fecha y hora en el nombre.
+            Guarda una copia de la base de datos en tu equipo ({dbType ? backupExt : "archivo"}).
+            El archivo incluirá la fecha y hora en el nombre.
           </p>
           <a
             href="/api/admin/db/backup"
-            download
+            download={dbType ? `backup.${backupExt.replace(".", "")}` : undefined}
             className="inline-block rounded border border-accent bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Descargar backup
@@ -98,7 +118,7 @@ export default function AdminBaseDeDatosPage() {
             Restaurar backup
           </h2>
           <p className="mb-4 text-muted">
-            Sube un archivo .db para reemplazar la base de datos actual.
+            Sube un archivo {dbType ? backupExt : ".db o .json"} para reemplazar la base de datos actual.
             Recomendado: cierra otras pestañas del admin durante la
             restauración.
           </p>
@@ -110,7 +130,7 @@ export default function AdminBaseDeDatosPage() {
             <input
               type="file"
               name="file"
-              accept=".db"
+              accept={dbType ? acceptExt : ".db,.json"}
               required
               className="block w-full text-sm text-muted file:mr-4 file:rounded file:border file:border-accent file:bg-accent/10 file:px-4 file:py-2 file:text-sm file:font-medium file:text-accent file:transition-colors hover:file:bg-accent/20"
             />

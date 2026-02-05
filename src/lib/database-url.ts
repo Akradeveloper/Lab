@@ -78,3 +78,10 @@ export function getPrismaAdapterConfig(): string | PrismaAdapterPoolConfig {
   }
   return getDatabaseUrl();
 }
+
+/** True si la BD configurada es MySQL (DATABASE_URL mysql o variables DB_*). */
+export function isMySQL(): boolean {
+  if (process.env.DATABASE_URL?.trim().startsWith("mysql")) return true;
+  const { DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER } = process.env;
+  return !!(DB_HOST?.trim() && DB_NAME?.trim() && DB_PORT?.trim() && DB_USER?.trim() && DB_PASSWORD !== undefined);
+}
