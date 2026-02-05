@@ -30,4 +30,4 @@ La documentación vive en la carpeta `website/` del repo.
 - Levantar en local: `cd website && npm run start`
 - Build: `cd website && npm run build`
 
-Si cambias la arquitectura, flujo de ramas o pasos de instalación, actualiza los documentos en `website/docs/` (y el README si aplica).
+Si cambias la arquitectura, el flujo de ramas o los pasos de instalación, actualiza los documentos en `website/docs/` (y el README si aplica). Al añadir o cambiar funcionalidades relevantes (rutas, roles, variables de entorno, flujos de usuario), actualiza también los documentos en `website/docs/` y el README cuando corresponda.
