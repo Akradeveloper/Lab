@@ -77,31 +77,31 @@ export async function restoreFromJson(prisma: PrismaClient, json: unknown): Prom
     await tx.user.deleteMany();
 
     if (data.User.length > 0) {
-      await tx.user.createMany({ data: data.User as Parameters<PrismaClient["user"]["createMany"]>[0]["data"] });
+      await tx.user.createMany({ data: data.User as any });
     }
     if (data.Module.length > 0) {
-      await tx.module.createMany({ data: data.Module as Parameters<PrismaClient["module"]["createMany"]>[0]["data"] });
+      await tx.module.createMany({ data: data.Module as any });
     }
     if (data.Submodule.length > 0) {
-      await tx.submodule.createMany({ data: data.Submodule as Parameters<PrismaClient["submodule"]["createMany"]>[0]["data"] });
+      await tx.submodule.createMany({ data: data.Submodule as any });
     }
     if (data.Lesson.length > 0) {
-      await tx.lesson.createMany({ data: data.Lesson as Parameters<PrismaClient["lesson"]["createMany"]>[0]["data"] });
+      await tx.lesson.createMany({ data: data.Lesson as any });
     }
     if (data.Exercise.length > 0) {
-      await tx.exercise.createMany({ data: data.Exercise as Parameters<PrismaClient["exercise"]["createMany"]>[0]["data"] });
+      await tx.exercise.createMany({ data: data.Exercise as any });
     }
     if (data.Progress.length > 0) {
-      await tx.progress.createMany({ data: data.Progress as Parameters<PrismaClient["progress"]["createMany"]>[0]["data"] });
+      await tx.progress.createMany({ data: data.Progress as any });
     }
     if (data.LessonCheckAttempt.length > 0) {
       await tx.lessonCheckAttempt.createMany({
-        data: data.LessonCheckAttempt as Parameters<PrismaClient["lessonCheckAttempt"]["createMany"]>[0]["data"],
+        data: data.LessonCheckAttempt as any,
       });
     }
     if (data.ExerciseAttempt.length > 0) {
       await tx.exerciseAttempt.createMany({
-        data: data.ExerciseAttempt as Parameters<PrismaClient["exerciseAttempt"]["createMany"]>[0]["data"],
+        data: data.ExerciseAttempt as any,
       });
     }
   });
