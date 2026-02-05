@@ -12,6 +12,9 @@ export async function GET() {
   const modules = await prisma.module.findMany({
     orderBy: { order: "asc" },
     include: {
+      submodules: {
+        include: { _count: { select: { lessons: true } } },
+      },
       _count: { select: { lessons: true } },
     },
   });
@@ -21,7 +24,9 @@ export async function GET() {
     title: m.title,
     description: m.description,
     order: m.order,
-    lessonsCount: m._count.lessons,
+    lessonsCount:
+      m.submodules.reduce((sum, sm) => sum + sm._count.lessons, 0) +
+      m._count.lessons,
     createdAt: m.createdAt,
   }));
 

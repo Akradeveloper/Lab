@@ -4,9 +4,11 @@ import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { Header } from "@/components/Header";
 import { prisma } from "@/lib/prisma";
-import { AdminExercisesList } from "./admin-exercises-list";
+import { AdminExercisesList } from "../../../../lessons/[lessonId]/admin-exercises-list";
 
-type Props = { params: Promise<{ moduleId: string; lessonId: string }> };
+type Props = {
+  params: Promise<{ moduleId: string; submoduleId: string; lessonId: string }>;
+};
 
 export async function generateMetadata({ params }: Props) {
   const { lessonId } = await params;
@@ -21,35 +23,36 @@ export async function generateMetadata({ params }: Props) {
   };
 }
 
-export default async function AdminLessonExercisesPage({ params }: Props) {
+export default async function AdminSubmoduleLessonExercisesPage({
+  params,
+}: Props) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ADMIN") redirect("/dashboard");
 
-  const { moduleId, lessonId } = await params;
+  const { moduleId, submoduleId, lessonId } = await params;
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
     include: {
-      module: { select: { id: true, title: true } },
       submodule: {
         select: {
           id: true,
+          title: true,
           module: { select: { id: true, title: true } },
         },
       },
     },
   });
 
-  if (!lesson) notFound();
+  if (
+    !lesson ||
+    lesson.submoduleId !== submoduleId ||
+    !lesson.submodule ||
+    lesson.submodule.module.id !== moduleId
+  )
+    notFound();
 
-  if (lesson.submoduleId != null) {
-    redirect(
-      `/admin/curriculum/${moduleId}/submodules/${lesson.submoduleId}/lessons/${lessonId}`
-    );
-  }
-
-  if (lesson.moduleId !== moduleId) notFound();
-
-  const mod = lesson.module!;
+  const mod = lesson.submodule.module;
+  const sub = lesson.submodule;
 
   return (
     <div className="min-h-screen bg-background">
@@ -68,6 +71,13 @@ export default async function AdminLessonExercisesPage({ params }: Props) {
             className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
           >
             {mod.title}
+          </Link>
+          <span className="mx-2">/</span>
+          <Link
+            href={`/admin/curriculum/${moduleId}/submodules/${submoduleId}`}
+            className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
+          >
+            {sub.title}
           </Link>
         </nav>
         <h1 className="mb-2 text-2xl font-semibold text-foreground">

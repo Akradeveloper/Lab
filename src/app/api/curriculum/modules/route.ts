@@ -14,9 +14,14 @@ export async function GET() {
   const modules = await prisma.module.findMany({
     orderBy: { order: "asc" },
     include: {
-      lessons: {
+      submodules: {
         orderBy: { order: "asc" },
-        select: { id: true, title: true, order: true },
+        include: {
+          lessons: {
+            orderBy: { order: "asc" },
+            select: { id: true, title: true, order: true },
+          },
+        },
       },
     },
   });
@@ -31,21 +36,35 @@ export async function GET() {
   );
 
   const list = modules.map((mod) => {
-    const lessons = mod.lessons.map((l) => ({
-      id: l.id,
-      title: l.title,
-      order: l.order,
-      completed: completedLessonIds.has(`${mod.id}:${l.id}`),
-    }));
-    const completedCount = lessons.filter((l) => l.completed).length;
-    const totalCount = lessons.length;
+    let totalCount = 0;
+    let completedCount = 0;
+    const submodules = mod.submodules.map((sub) => {
+      const lessons = sub.lessons.map((l) => {
+        const completed = completedLessonIds.has(`${mod.id}:${l.id}`);
+        if (completed) completedCount++;
+        totalCount++;
+        return {
+          id: l.id,
+          title: l.title,
+          order: l.order,
+          completed,
+        };
+      });
+      return {
+        id: sub.id,
+        title: sub.title,
+        description: sub.description,
+        order: sub.order,
+        lessons,
+      };
+    });
 
     return {
       id: mod.id,
       title: mod.title,
       description: mod.description,
       order: mod.order,
-      lessons,
+      submodules,
       completedCount,
       totalCount,
     };

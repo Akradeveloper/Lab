@@ -11,12 +11,27 @@ type Exercise = {
   order: number;
 };
 
+type LessonNav = {
+  id: string;
+  title: string;
+  submoduleId?: string | null;
+};
+
+function lessonHref(moduleId: string, lesson: LessonNav): string {
+  if (lesson.submoduleId) {
+    return `/modulos/${moduleId}/submodulos/${lesson.submoduleId}/lecciones/${lesson.id}`;
+  }
+  return `/modulos/${moduleId}/lecciones/${lesson.id}`;
+}
+
 type Props = {
   moduleId: string;
   lessonId: string;
   exercises: Exercise[];
-  nextLesson: { id: string; title: string } | null;
-  prevLesson: { id: string; title: string } | null;
+  nextLesson: LessonNav | null;
+  prevLesson: LessonNav | null;
+  backHref: string;
+  backLabel: string;
 };
 
 export function LessonExercises({
@@ -25,6 +40,8 @@ export function LessonExercises({
   exercises,
   nextLesson,
   prevLesson,
+  backHref,
+  backLabel,
 }: Props) {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [checking, setChecking] = useState(false);
@@ -113,17 +130,17 @@ export function LessonExercises({
             <div className="mt-2 flex flex-wrap gap-2">
               {nextLesson && (
                 <Link
-                  href={`/modulos/${moduleId}/lecciones/${nextLesson.id}`}
+                  href={lessonHref(moduleId, nextLesson)}
                   className="rounded bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 >
                   Siguiente: {nextLesson.title}
                 </Link>
               )}
               <Link
-                href={`/modulos/${moduleId}`}
+                href={backHref}
                 className="rounded border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
-                Volver al módulo
+                {backLabel}
               </Link>
             </div>
           </div>
@@ -141,17 +158,17 @@ export function LessonExercises({
         <div className="flex flex-wrap gap-2">
           {nextLesson && (
             <Link
-              href={`/modulos/${moduleId}/lecciones/${nextLesson.id}`}
+              href={lessonHref(moduleId, nextLesson)}
               className="rounded bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Siguiente: {nextLesson.title}
             </Link>
           )}
           <Link
-            href={`/modulos/${moduleId}`}
+            href={backHref}
             className="rounded border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            Volver al módulo
+            {backLabel}
           </Link>
         </div>
       </section>
@@ -250,7 +267,7 @@ export function LessonExercises({
         </button>
         {prevLesson && (
           <Link
-            href={`/modulos/${moduleId}/lecciones/${prevLesson.id}`}
+            href={lessonHref(moduleId, prevLesson)}
             className="text-sm text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
           >
             ← {prevLesson.title}

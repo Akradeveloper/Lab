@@ -19,39 +19,22 @@ export async function GET(_request: Request, { params }: Params) {
     );
   }
 
-  const module_ = await prisma.module.findUnique({
-    where: { id: moduleId },
-    include: { _count: { select: { submodules: true } } },
-  });
-  if (!module_) {
-    return NextResponse.json(
-      { error: "Módulo no encontrado" },
-      { status: 404 }
-    );
-  }
-  if (module_._count.submodules > 0) {
-    return NextResponse.json(
-      { error: "Este módulo tiene submódulos; las lecciones se gestionan por submódulo." },
-      { status: 400 }
-    );
-  }
-
-  const lessons = await prisma.lesson.findMany({
+  const submodules = await prisma.submodule.findMany({
     where: { moduleId },
     orderBy: { order: "asc" },
     include: {
-      _count: { select: { exercises: true } },
+      _count: { select: { lessons: true } },
     },
   });
 
-  const list = lessons.map((l) => ({
-    id: l.id,
-    moduleId: l.moduleId,
-    title: l.title,
-    content: l.content,
-    order: l.order,
-    exercisesCount: l._count.exercises,
-    createdAt: l.createdAt,
+  const list = submodules.map((s) => ({
+    id: s.id,
+    moduleId: s.moduleId,
+    title: s.title,
+    description: s.description,
+    order: s.order,
+    lessonsCount: s._count.lessons,
+    createdAt: s.createdAt,
   }));
 
   return NextResponse.json(list);
@@ -73,7 +56,7 @@ export async function POST(request: Request, { params }: Params) {
 
   const module_ = await prisma.module.findUnique({
     where: { id: moduleId },
-    include: { _count: { select: { submodules: true } } },
+    include: { _count: { select: { lessons: true } } },
   });
   if (!module_) {
     return NextResponse.json(
@@ -81,16 +64,16 @@ export async function POST(request: Request, { params }: Params) {
       { status: 404 }
     );
   }
-  if (module_._count.submodules > 0) {
+  if (module_._count.lessons > 0) {
     return NextResponse.json(
-      { error: "Este módulo tiene submódulos; añade lecciones desde el submódulo." },
+      { error: "Este módulo tiene lecciones directas. No se pueden añadir submódulos; elimina antes las lecciones o usa solo submódulos." },
       { status: 400 }
     );
   }
 
   try {
     const body = await request.json();
-    const { title, content, order } = body;
+    const { title, description, order } = body;
 
     if (!title || typeof title !== "string" || !title.trim()) {
       return NextResponse.json(
@@ -99,18 +82,20 @@ export async function POST(request: Request, { params }: Params) {
       );
     }
 
-    const lesson = await prisma.lesson.create({
+    const submodule = await prisma.submodule.create({
       data: {
         moduleId,
         title: title.trim(),
-        content:
-          content != null && typeof content === "string" ? content : "",
+        description:
+          description != null && typeof description === "string"
+            ? description.trim()
+            : null,
         order:
           typeof order === "number" && Number.isInteger(order) ? order : 0,
       },
     });
 
-    return NextResponse.json(lesson);
+    return NextResponse.json(submodule);
   } catch (e) {
     if ((e as { code?: string })?.code === "P2003") {
       return NextResponse.json(
@@ -119,10 +104,10 @@ export async function POST(request: Request, { params }: Params) {
       );
     }
     if (process.env.NODE_ENV !== "production") {
-      console.error("Error al crear lección:", e);
+      console.error("Error al crear submódulo:", e);
     }
     return NextResponse.json(
-      { error: "Error al crear la lección" },
+      { error: "Error al crear el submódulo" },
       { status: 500 }
     );
   }

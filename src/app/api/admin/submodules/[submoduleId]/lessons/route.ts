@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-type Params = { params: Promise<{ moduleId: string }> };
+type Params = { params: Promise<{ submoduleId: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
   const session = await getServerSession(authOptions);
@@ -11,33 +11,16 @@ export async function GET(_request: Request, { params }: Params) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  const { moduleId } = await params;
-  if (!moduleId) {
+  const { submoduleId } = await params;
+  if (!submoduleId) {
     return NextResponse.json(
-      { error: "ID de módulo requerido" },
-      { status: 400 }
-    );
-  }
-
-  const module_ = await prisma.module.findUnique({
-    where: { id: moduleId },
-    include: { _count: { select: { submodules: true } } },
-  });
-  if (!module_) {
-    return NextResponse.json(
-      { error: "Módulo no encontrado" },
-      { status: 404 }
-    );
-  }
-  if (module_._count.submodules > 0) {
-    return NextResponse.json(
-      { error: "Este módulo tiene submódulos; las lecciones se gestionan por submódulo." },
+      { error: "ID de submódulo requerido" },
       { status: 400 }
     );
   }
 
   const lessons = await prisma.lesson.findMany({
-    where: { moduleId },
+    where: { submoduleId },
     orderBy: { order: "asc" },
     include: {
       _count: { select: { exercises: true } },
@@ -46,7 +29,7 @@ export async function GET(_request: Request, { params }: Params) {
 
   const list = lessons.map((l) => ({
     id: l.id,
-    moduleId: l.moduleId,
+    submoduleId: l.submoduleId,
     title: l.title,
     content: l.content,
     order: l.order,
@@ -63,27 +46,10 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  const { moduleId } = await params;
-  if (!moduleId) {
+  const { submoduleId } = await params;
+  if (!submoduleId) {
     return NextResponse.json(
-      { error: "ID de módulo requerido" },
-      { status: 400 }
-    );
-  }
-
-  const module_ = await prisma.module.findUnique({
-    where: { id: moduleId },
-    include: { _count: { select: { submodules: true } } },
-  });
-  if (!module_) {
-    return NextResponse.json(
-      { error: "Módulo no encontrado" },
-      { status: 404 }
-    );
-  }
-  if (module_._count.submodules > 0) {
-    return NextResponse.json(
-      { error: "Este módulo tiene submódulos; añade lecciones desde el submódulo." },
+      { error: "ID de submódulo requerido" },
       { status: 400 }
     );
   }
@@ -101,7 +67,7 @@ export async function POST(request: Request, { params }: Params) {
 
     const lesson = await prisma.lesson.create({
       data: {
-        moduleId,
+        submoduleId,
         title: title.trim(),
         content:
           content != null && typeof content === "string" ? content : "",
@@ -114,7 +80,7 @@ export async function POST(request: Request, { params }: Params) {
   } catch (e) {
     if ((e as { code?: string })?.code === "P2003") {
       return NextResponse.json(
-        { error: "Módulo no encontrado" },
+        { error: "Submódulo no encontrado" },
         { status: 404 }
       );
     }

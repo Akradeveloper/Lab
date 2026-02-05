@@ -24,7 +24,7 @@ export async function PUT(request: Request, { params }: Params) {
     const { type, question, options, correctAnswer, order } = body;
 
     const data: {
-      type?: "MULTIPLE_CHOICE" | "TRUE_FALSE";
+      type?: "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CODE";
       question?: string;
       options?: string;
       correctAnswer?: string;
@@ -32,7 +32,7 @@ export async function PUT(request: Request, { params }: Params) {
     } = {};
 
     if (type !== undefined) {
-      if (!["MULTIPLE_CHOICE", "TRUE_FALSE"].includes(type)) {
+      if (!["MULTIPLE_CHOICE", "TRUE_FALSE", "CODE"].includes(type)) {
         return NextResponse.json(
           { error: "Tipo de ejercicio inválido" },
           { status: 400 }
@@ -50,14 +50,21 @@ export async function PUT(request: Request, { params }: Params) {
       data.question = question.trim();
     }
     if (options !== undefined) {
-      data.options = Array.isArray(options)
-        ? JSON.stringify(options)
-        : typeof options === "string"
-          ? options
-          : "[]";
+      if (typeof options === "string") {
+        data.options = options;
+      } else if (Array.isArray(options)) {
+        data.options = JSON.stringify(options);
+      } else if (options !== null && typeof options === "object") {
+        data.options = JSON.stringify(options);
+      } else {
+        data.options = "[]";
+      }
     }
     if (correctAnswer !== undefined) {
-      if (type === "TRUE_FALSE" || body.type === "TRUE_FALSE") {
+      const exType = type ?? body.type;
+      if (exType === "CODE") {
+        data.correctAnswer = "";
+      } else if (exType === "TRUE_FALSE") {
         data.correctAnswer =
           correctAnswer === true || correctAnswer === "true"
             ? JSON.stringify(true)

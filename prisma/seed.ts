@@ -26,7 +26,7 @@ async function main() {
     console.log("Admin ya existe, omitiendo creación de admin.");
   }
 
-  // Seed de ejemplo: un módulo con 2 lecciones y ejercicios
+  // Seed de ejemplo: un módulo con un submódulo, 2 lecciones y ejercicios
   const existingModule = await prisma.module.findFirst({});
   if (!existingModule) {
     const mod = await prisma.module.create({
@@ -36,9 +36,17 @@ async function main() {
         order: 0,
       },
     });
-    const lesson1 = await prisma.lesson.create({
+    const sub = await prisma.submodule.create({
       data: {
         moduleId: mod.id,
+        title: "Introducción a QA",
+        description: "Conceptos básicos de testing.",
+        order: 0,
+      },
+    });
+    const lesson1 = await prisma.lesson.create({
+      data: {
+        submoduleId: sub.id,
         title: "¿Qué es el testing?",
         content:
           "El **testing** es el proceso de verificar que un sistema se comporta como se espera. Incluye ejecutar el software y comparar los resultados con los requisitos.",
@@ -57,7 +65,7 @@ async function main() {
     });
     const lesson2 = await prisma.lesson.create({
       data: {
-        moduleId: mod.id,
+        submoduleId: sub.id,
         title: "Tipos de pruebas",
         content:
           "Existen pruebas **funcionales** (¿hace lo que debe?) y **no funcionales** (rendimiento, usabilidad, etc.).",
@@ -78,7 +86,7 @@ async function main() {
         order: 0,
       },
     });
-    console.log("Módulo de ejemplo creado: Introducción a QA (2 lecciones con ejercicios).");
+    console.log("Módulo de ejemplo creado: Introducción a QA (submódulo con 2 lecciones y ejercicios).");
   } else {
     console.log("Módulos ya existen, omitiendo seed de currículo.");
   }

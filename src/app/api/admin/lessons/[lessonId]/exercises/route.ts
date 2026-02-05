@@ -56,9 +56,9 @@ export async function POST(request: Request, { params }: Params) {
     const body = await request.json();
     const { type, question, options, correctAnswer, order } = body;
 
-    if (!type || !["MULTIPLE_CHOICE", "TRUE_FALSE"].includes(type)) {
+    if (!type || !["MULTIPLE_CHOICE", "TRUE_FALSE", "CODE"].includes(type)) {
       return NextResponse.json(
-        { error: "Tipo de ejercicio inválido (MULTIPLE_CHOICE o TRUE_FALSE)" },
+        { error: "Tipo de ejercicio inválido (MULTIPLE_CHOICE, TRUE_FALSE o CODE)" },
         { status: 400 }
       );
     }
@@ -69,27 +69,41 @@ export async function POST(request: Request, { params }: Params) {
       );
     }
 
-    const optionsStr =
-      Array.isArray(options) && options.length > 0
-        ? JSON.stringify(options)
-        : type === "TRUE_FALSE"
-          ? JSON.stringify(["Verdadero", "Falso"])
-          : "[]";
-    const correctStr =
-      type === "TRUE_FALSE"
-        ? typeof correctAnswer === "boolean"
-          ? JSON.stringify(correctAnswer)
-          : correctAnswer === "true" || correctAnswer === true
-            ? JSON.stringify(true)
-            : JSON.stringify(false)
-        : typeof correctAnswer === "number" && Number.isInteger(correctAnswer)
-          ? JSON.stringify(correctAnswer)
-          : JSON.stringify(0);
+    let optionsStr: string;
+    let correctStr: string;
+    if (type === "CODE") {
+      const codeOpts = options != null && typeof options === "object" && !Array.isArray(options)
+        ? options as { language?: string; template?: string; testCases?: Array<{ input: string; expectedOutput: string }> }
+        : {};
+      optionsStr = JSON.stringify({
+        language: typeof codeOpts.language === "string" ? codeOpts.language : "javascript",
+        template: typeof codeOpts.template === "string" ? codeOpts.template : "",
+        testCases: Array.isArray(codeOpts.testCases) ? codeOpts.testCases : [],
+      });
+      correctStr = "";
+    } else {
+      optionsStr =
+        Array.isArray(options) && options.length > 0
+          ? JSON.stringify(options)
+          : type === "TRUE_FALSE"
+            ? JSON.stringify(["Verdadero", "Falso"])
+            : "[]";
+      correctStr =
+        type === "TRUE_FALSE"
+          ? typeof correctAnswer === "boolean"
+            ? JSON.stringify(correctAnswer)
+            : correctAnswer === "true" || correctAnswer === true
+              ? JSON.stringify(true)
+              : JSON.stringify(false)
+          : typeof correctAnswer === "number" && Number.isInteger(correctAnswer)
+            ? JSON.stringify(correctAnswer)
+            : JSON.stringify(0);
+    }
 
     const exercise = await prisma.exercise.create({
       data: {
         lessonId,
-        type: type as "MULTIPLE_CHOICE" | "TRUE_FALSE",
+        type: type as "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CODE",
         question: question.trim(),
         options: optionsStr,
         correctAnswer: correctStr,

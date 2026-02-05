@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 type ExerciseItem = {
   id: string;
   lessonId: string;
-  type: "MULTIPLE_CHOICE" | "TRUE_FALSE";
+  type: "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CODE";
   question: string;
   options: string;
   correctAnswer: string;
@@ -30,6 +30,11 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
   const [formCorrectBool, setFormCorrectBool] = useState(true);
   const [formOrder, setFormOrder] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [generatingAI, setGeneratingAI] = useState(false);
+  const [suggestionsEx, setSuggestionsEx] = useState<
+    Array<{ type: string; description: string }>
+  >([]);
+  const [loadingSuggestionsEx, setLoadingSuggestionsEx] = useState(false);
 
   function loadExercises() {
     setLoading(true);
@@ -60,6 +65,12 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
   }
 
   function openEdit(e: ExerciseItem) {
+    if (e.type === "CODE") {
+      alert(
+        "La edición de ejercicios de código estará disponible próximamente."
+      );
+      return;
+    }
     setEditingId(e.id);
     setFormType(e.type);
     setFormQuestion(e.question);
@@ -145,6 +156,49 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
       .finally(() => setSaving(false));
   }
 
+  function handleGenerateWithAI() {
+    setError("");
+    setGeneratingAI(true);
+    fetch(`/api/admin/lessons/${lessonId}/generate-exercises`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    })
+      .then((res) => {
+        if (!res.ok) return res.json().then((d) => Promise.reject(d));
+        return res.json();
+      })
+      .then(() => loadExercises())
+      .catch((err) =>
+        setError(err?.error ?? "Error al generar ejercicios con IA")
+      )
+      .finally(() => setGeneratingAI(false));
+  }
+
+  function fetchExerciseSuggestions() {
+    setLoadingSuggestionsEx(true);
+    setSuggestionsEx([]);
+    setError("");
+    fetch(`/api/admin/lessons/${lessonId}/suggest-exercises`)
+      .then((res) => res.json())
+      .then(
+        (data: {
+          suggestions?: Array<{ type: string; description: string }>;
+          error?: string;
+        }) => {
+          if (data.error && !data.suggestions) {
+            setError(data.error);
+          } else {
+            setSuggestionsEx(
+              Array.isArray(data.suggestions) ? data.suggestions : []
+            );
+          }
+        }
+      )
+      .catch(() => setError("No se pudieron cargar las sugerencias"))
+      .finally(() => setLoadingSuggestionsEx(false));
+  }
+
   function handleDelete(id: string) {
     if (!confirm("¿Eliminar este ejercicio?")) return;
     setError("");
@@ -171,7 +225,23 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
           {error}
         </p>
       )}
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        <button
+          type="button"
+          onClick={fetchExerciseSuggestions}
+          disabled={loadingSuggestionsEx}
+          className="rounded border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+        >
+          {loadingSuggestionsEx ? "Cargando…" : "Sugerencia"}
+        </button>
+        <button
+          type="button"
+          onClick={handleGenerateWithAI}
+          disabled={generatingAI}
+          className="rounded border border-accent bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+        >
+          {generatingAI ? "Generando…" : "Generar ejercicios con IA"}
+        </button>
         <button
           type="button"
           onClick={openCreate}
@@ -180,6 +250,28 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
           Nuevo ejercicio
         </button>
       </div>
+      {suggestionsEx.length > 0 && (
+        <div className="rounded-lg border border-border bg-surface p-4">
+          <p className="mb-2 text-sm font-medium text-foreground">
+            Sugerencias (usa como referencia o genera con IA):
+          </p>
+          <ul className="list-inside list-disc space-y-1 text-sm text-muted">
+            {suggestionsEx.map((s, i) => (
+              <li key={i}>
+                <span className="font-medium text-foreground">
+                  {s.type === "CODE"
+                    ? "Código"
+                    : s.type === "TRUE_FALSE"
+                    ? "V/F"
+                    : "Test"}
+                </span>
+                {" — "}
+                {s.description}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {showForm && (
         <form
@@ -342,7 +434,9 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
               <p className="font-medium text-foreground">{ex.question}</p>
               <p className="mt-1 text-sm text-muted">
                 Tipo:{" "}
-                {ex.type === "TRUE_FALSE"
+                {ex.type === "CODE"
+                  ? "Código"
+                  : ex.type === "TRUE_FALSE"
                   ? "Verdadero/Falso"
                   : "Opción múltiple"}
                 {" · "}Orden: {ex.order}

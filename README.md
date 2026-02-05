@@ -17,6 +17,10 @@ Web tipo FreeCodeCamp enfocada en QA: autenticación con roles **alumno** y **ad
 
 Abre [http://localhost:3000](http://localhost:3000) (o el puerto que indique Next.js).
 
+### Variables de entorno opcionales
+
+- **OPENAI_API_KEY**: para usar **Nueva lección con IA** (admin → currículo → módulo → Nueva lección con IA) y **Generar ejercicios con IA** (en la gestión de ejercicios de una lección). Sin esta variable, esos botones devolverán un aviso para configurarla en `.env`.
+
 ## Usuario admin de prueba (tras `db seed`)
 
 - **Email:** admin@qalab.dev  
