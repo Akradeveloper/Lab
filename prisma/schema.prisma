@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
 }
 
 enum Role {
@@ -24,6 +24,8 @@ model User {
   progress             Progress[]
   lessonCheckAttempts  LessonCheckAttempt[]
   exerciseAttempts     ExerciseAttempt[]
+
+  @@map("user")
 }
 
 model Progress {
@@ -33,6 +35,8 @@ model Progress {
   lessonId    String
   completedAt DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("progress")
 }
 
 enum ExerciseType {
@@ -57,6 +61,8 @@ model Module {
   createdAt   DateTime    @default(now())
   submodules  Submodule[]
   lessons     Lesson[]
+
+  @@map("module")
 }
 
 model Submodule {
@@ -68,6 +74,8 @@ model Submodule {
   createdAt   DateTime @default(now())
   module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   lessons     Lesson[]
+
+  @@map("submodule")
 }
 
 model Lesson {
@@ -75,26 +83,30 @@ model Lesson {
   moduleId     String?
   submoduleId  String?
   title        String
-  content      String          @default("")
+  content      String          @default("") @db.LongText
   order        Int             @default(0)
   difficulty   DifficultyLevel?
   createdAt    DateTime        @default(now())
   module       Module?         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   submodule    Submodule?      @relation(fields: [submoduleId], references: [id], onDelete: Cascade)
   exercises    Exercise[]
+
+  @@map("lesson")
 }
 
 model Exercise {
   id              String            @id @default(cuid())
   lessonId        String
   type            ExerciseType
-  question        String
-  options         String            // JSON: MULTIPLE_CHOICE/TRUE_FALSE = array of options; CODE = { language, template, testCases }
-  correctAnswer   String            // JSON: MULTIPLE_CHOICE = index (number), TRUE_FALSE = boolean, CODE = "" or reserved
+  question        String            @db.LongText
+  options         String            @db.LongText  // JSON: MULTIPLE_CHOICE/TRUE_FALSE = array of options; CODE = { language, template, testCases }
+  correctAnswer   String            @db.LongText  // JSON: MULTIPLE_CHOICE = index (number), TRUE_FALSE = boolean, CODE = "" or reserved
   order           Int               @default(0)
   createdAt       DateTime          @default(now())
   lesson          Lesson            @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   exerciseAttempts ExerciseAttempt[]
+
+  @@map("exercise")
 }
 
 model LessonCheckAttempt {
@@ -104,6 +116,8 @@ model LessonCheckAttempt {
   allCorrect  Boolean
   createdAt   DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("lessoncheckattempt")
 }
 
 model ExerciseAttempt {
@@ -115,4 +129,6 @@ model ExerciseAttempt {
   createdAt  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@map("exerciseattempt")
 }

@@ -5,13 +5,15 @@ Web tipo FreeCodeCamp enfocada en QA: autenticación con roles **alumno** y **ad
 ## Stack
 
 - Next.js (App Router), TypeScript, Tailwind CSS
-- Prisma + SQLite
+- Prisma + MySQL
 - NextAuth.js (Credentials + JWT)
 
 ## Cómo arrancar
 
+Necesitas un servidor MySQL en marcha y `DATABASE_URL` en `.env` con formato `mysql://usuario:contraseña@host:3306/nombre_bd`. Crea la base si no existe (ej. `CREATE DATABASE qalab;`).
+
 1. Instalar dependencias: `npm install`
-2. Crear BD y tablas: `npx prisma migrate dev`
+2. Crear tablas: `npx prisma migrate dev` (genera la migración inicial si es la primera vez con MySQL)
 3. (Opcional) Crear admin de prueba: `npx prisma db seed`
 4. Servidor de desarrollo: `npm run dev`
 
@@ -30,14 +32,14 @@ Los nuevos registros son **alumnos**. Solo el admin puede entrar en `/admin` y v
 
 ## Backup de la base de datos
 
-Puedes hacer backup y restaurar de dos formas:
+El proyecto usa **MySQL**. El backup/restore por archivo (.db) desde el panel admin (**Admin → Base de datos**) y los scripts `npm run db:backup` / `npm run db:restore` están pensados para **SQLite** y no están disponibles con MySQL.
 
-- **Desde el panel admin**: en **Admin → Base de datos** puedes descargar un backup (archivo .db) y subir un archivo .db para restaurar, sin usar la terminal.
-- **Con scripts**: antes de desplegar (o periódicamente), ejecuta `npm run db:backup`. Se creará un archivo en `backups/` con fecha y hora. Para restaurar (con la aplicación parada): `npm run db:restore -- backups/backup-YYYY-MM-DDTHH-mm-ss.db` (o sin argumento para usar el backup más reciente).
+Con **MySQL**, haz backup y restauración con las herramientas del servidor, por ejemplo:
 
-Guarda el archivo de backup en un lugar persistente (copia en tu máquina, artefacto de CI, almacenamiento en la nube) si el servidor de despliegue tiene disco efímero.
+- **Backup:** `mysqldump -u usuario -p nombre_bd > backup.sql`
+- **Restaurar:** `mysql -u usuario -p nombre_bd < backup.sql`
 
-En entornos donde el disco se borra en cada despliegue (por ejemplo muchos PaaS), tendrás que ejecutar la restauración después de cada despliegue desde ese archivo guardado, o valorar un servicio de base de datos persistente (por ejemplo Turso para SQLite en la nube).
+En producción (Render, VPS, etc.), programa dumps periódicos o usa las opciones de backup que ofrezca tu proveedor de MySQL.
 
 ## Documentación
 

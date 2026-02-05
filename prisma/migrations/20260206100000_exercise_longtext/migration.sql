@@ -1,0 +1,6 @@
+-- AlterTable (MySQL no permite DEFAULT en LONGTEXT)
+ALTER TABLE `exercise` MODIFY COLUMN `question` LONGTEXT NOT NULL;
+
+ALTER TABLE `exercise` MODIFY COLUMN `options` LONGTEXT NOT NULL;
+
+ALTER TABLE `exercise` MODIFY COLUMN `correctAnswer` LONGTEXT NOT NULL;

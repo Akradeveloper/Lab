@@ -1,10 +1,17 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import bcrypt from "bcryptjs";
+import { getPrismaAdapterConfig } from "../src/lib/database-url";
 
-const url = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
-const adapter = new PrismaBetterSqlite3({ url });
+let config: ReturnType<typeof getPrismaAdapterConfig>;
+try {
+  config = getPrismaAdapterConfig();
+} catch {
+  console.error("Configuración de BD: define DATABASE_URL o DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER en .env");
+  process.exit(1);
+}
+const adapter = new PrismaMariaDb(config);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
