@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type ProgressItem = {
@@ -83,6 +84,7 @@ export function AdminStudentsTable() {
             <th className="px-4 py-3 font-medium text-foreground">
               Última actividad
             </th>
+            <th className="px-4 py-3 font-medium text-foreground">Progreso</th>
           </tr>
         </thead>
         <tbody>
@@ -98,6 +100,14 @@ export function AdminStudentsTable() {
               </td>
               <td className="px-4 py-3 text-muted">
                 {formatDate(s.lastActivity)}
+              </td>
+              <td className="px-4 py-3">
+                <Link
+                  href={`/admin/alumnos/${s.id}`}
+                  className="text-sm font-medium text-accent transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
+                >
+                  Ver progreso
+                </Link>
               </td>
             </tr>
           ))}

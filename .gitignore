@@ -1,4 +1,5 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Solo lo necesario: código, config, migraciones. El resto se ignora.
 
 # dependencies
 /node_modules
@@ -25,6 +26,18 @@ backups/
 
 # databases (SQLite)
 *.db
+prisma/dev.db
+prisma/test.db
+prisma/production.db
+
+# datos sensibles (claves, certificados, credenciales; .env* y *.pem ya están en otras secciones)
+*.key
+*.crt
+*.cer
+secrets/
+.secrets
+credentials.json
+*.credentials
 
 # misc
 .DS_Store
@@ -32,6 +45,7 @@ backups/
 *.local
 
 # debug
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

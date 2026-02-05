@@ -1,9 +1,6 @@
 ---
-description: Convenciones de código para la app QA Lab
-globs: src/**/*.ts,src/**/*.tsx
-alwaysApply: false
+alwaysApply: true
 ---
-
 # Convenciones de código (src/)
 
 - Usar componentes funcionales en React.

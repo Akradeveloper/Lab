@@ -4,8 +4,7 @@ import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { Header } from "@/components/Header";
 import { prisma } from "@/lib/prisma";
-import { AdminSubmodulesList } from "./admin-submodules-list";
-import { AdminLessonsList } from "./admin-lessons-list";
+import { AdminModuleTabs } from "./admin-module-tabs";
 
 type Props = { params: Promise<{ moduleId: string }> };
 
@@ -33,6 +32,10 @@ export default async function AdminModulePage({ params }: Props) {
   if (!module_) notFound();
 
   const hasSubmodules = module_.submodules.length > 0;
+  const submodulesForLinks = module_.submodules.map((s) => ({
+    id: s.id,
+    title: s.title,
+  }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -46,28 +49,15 @@ export default async function AdminModulePage({ params }: Props) {
             ← Currículo
           </Link>
         </nav>
-        <h1 className="mb-2 text-2xl font-semibold text-foreground">
+        <h1 className="mb-6 text-2xl font-semibold text-foreground">
           {module_.title}
         </h1>
-        {hasSubmodules ? (
-          <>
-            <p className="mb-6 text-muted">Submódulos del módulo</p>
-            <AdminSubmodulesList
-              moduleId={moduleId}
-              moduleTitle={module_.title}
-            />
-          </>
-        ) : (
-          <>
-            <p className="mb-6 text-muted">Lecciones del módulo</p>
-            <AdminLessonsList
-              moduleId={moduleId}
-              moduleTitle={module_.title}
-              submoduleId={null}
-              submoduleTitle={null}
-            />
-          </>
-        )}
+        <AdminModuleTabs
+          moduleId={moduleId}
+          moduleTitle={module_.title}
+          hasSubmodules={hasSubmodules}
+          submodules={submodulesForLinks}
+        />
       </main>
     </div>
   );
