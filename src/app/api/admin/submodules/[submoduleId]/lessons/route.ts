@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import type { DifficultyLevel } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -81,7 +82,7 @@ export async function POST(request: Request, { params }: Params) {
           content != null && typeof content === "string" ? content : "",
         order:
           typeof order === "number" && Number.isInteger(order) ? order : 0,
-        ...(difficultyValue !== undefined && { difficulty: difficultyValue }),
+        ...(difficultyValue !== undefined && { difficulty: difficultyValue as DifficultyLevel }),
       },
     });
 
