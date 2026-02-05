@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -25,12 +26,7 @@ export async function PUT(request: Request, { params }: Params) {
     const body = await request.json();
     const { title, content, order, difficulty } = body;
 
-    const data: {
-      title?: string;
-      content?: string;
-      order?: number;
-      difficulty?: string | null;
-    } = {};
+    const data: Prisma.LessonUpdateInput = {};
     if (title !== undefined) {
       if (typeof title !== "string" || !title.trim()) {
         return NextResponse.json(
