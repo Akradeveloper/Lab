@@ -26,6 +26,9 @@ backups/
 
 # databases (SQLite)
 *.db
+prisma/dev.db
+prisma/test.db
+prisma/production.db
 
 # datos sensibles (claves, certificados, credenciales; .env* y *.pem ya están en otras secciones)
 *.key
