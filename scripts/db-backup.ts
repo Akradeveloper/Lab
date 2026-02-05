@@ -2,7 +2,14 @@ import "dotenv/config";
 import fs from "fs";
 import path from "path";
 
-const url = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
+const url = process.env.DATABASE_URL ?? "";
+
+if (!url.startsWith("file:")) {
+  console.error(
+    "Los scripts de backup por archivo son solo para SQLite. Con MySQL use mysqldump en el servidor."
+  );
+  process.exit(1);
+}
 
 function getDbPath(): string {
   const match = url.match(/^file:(.+)$/);

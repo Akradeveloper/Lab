@@ -10,6 +10,16 @@ export async function GET() {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
+  if (process.env.DATABASE_URL?.startsWith("mysql")) {
+    return NextResponse.json(
+      {
+        error:
+          "Con MySQL el backup se debe hacer con mysqldump en el servidor. El backup por descarga de archivo solo está disponible con SQLite.",
+      },
+      { status: 501 }
+    );
+  }
+
   try {
     const dbPath = getDbFilePathOrThrow();
     const buffer = fs.readFileSync(dbPath);

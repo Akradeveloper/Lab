@@ -1,1 +1,0 @@
--- Add CODE to ExerciseType enum. SQLite stores enum as TEXT, no table change required.

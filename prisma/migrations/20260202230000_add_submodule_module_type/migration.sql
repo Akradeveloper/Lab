@@ -1,1 +1,0 @@
--- No-op: migration directory was left empty after schema revert.

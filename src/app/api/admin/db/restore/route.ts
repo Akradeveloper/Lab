@@ -17,6 +17,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
+  if (process.env.DATABASE_URL?.startsWith("mysql")) {
+    return NextResponse.json(
+      {
+        error:
+          "Con MySQL la restauración se hace con mysqldump/import en el servidor. La subida de archivo .db solo está disponible con SQLite.",
+      },
+      { status: 501 }
+    );
+  }
+
   let formData: FormData;
   try {
     formData = await request.formData();

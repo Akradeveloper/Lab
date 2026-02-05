@@ -3,7 +3,14 @@ import fs from "fs";
 import path from "path";
 import readline from "readline";
 
-const url = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
+const url = process.env.DATABASE_URL ?? "";
+
+if (!url.startsWith("file:")) {
+  console.error(
+    "Los scripts de backup/restore por archivo son solo para SQLite. Con MySQL use mysqldump en el servidor."
+  );
+  process.exit(1);
+}
 
 function getDbPath(): string {
   const match = url.match(/^file:(.+)$/);

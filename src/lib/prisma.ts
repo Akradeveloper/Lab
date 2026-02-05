@@ -1,8 +1,11 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 
-const url = process.env.DATABASE_URL ?? "file:./prisma/dev.db";
-const adapter = new PrismaBetterSqlite3({ url });
+const url = process.env.DATABASE_URL;
+if (!url) {
+  throw new Error("DATABASE_URL es obligatoria para el cliente Prisma.");
+}
+const adapter = new PrismaMariaDb(url);
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 export const prisma =
