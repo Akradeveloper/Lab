@@ -42,6 +42,32 @@ export type RecentActivityItem = {
   completedAt: Date;
 };
 
+/** Lección en orden curricular (para calcular "siguiente lección"). */
+export type LessonInOrder = {
+  id: string;
+  title: string;
+  moduleId: string;
+  submoduleId: string | null;
+};
+
+/**
+ * Devuelve la primera lección no completada según el orden curricular,
+ * o null si no hay o ya están todas completadas.
+ */
+export function getNextLessonToContinue(
+  progress: { courseId: string; lessonId: string }[],
+  orderedLessons: LessonInOrder[]
+): LessonInOrder | null {
+  const completedSet = new Set(
+    progress.map((p) => `${p.courseId}:${p.lessonId}`)
+  );
+  for (const les of orderedLessons) {
+    const key = `${les.moduleId}:${les.id}`;
+    if (!completedSet.has(key)) return les;
+  }
+  return null;
+}
+
 function getAllLessonIdsForModule(mod: ModuleForProfile): string[] {
   if (mod.submodules.length > 0) {
     return mod.submodules.flatMap((s) => s.lessons.map((l) => l.id));
