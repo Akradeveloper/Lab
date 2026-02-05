@@ -2,10 +2,13 @@ import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import bcrypt from "bcryptjs";
+import { getDatabaseUrl } from "../src/lib/database-url";
 
-const url = process.env.DATABASE_URL;
-if (!url) {
-  console.error("DATABASE_URL es obligatoria. Configúrala en .env");
+let url: string;
+try {
+  url = getDatabaseUrl();
+} catch {
+  console.error("Configuración de BD: define DATABASE_URL o DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER en .env");
   process.exit(1);
 }
 const adapter = new PrismaMariaDb(url);

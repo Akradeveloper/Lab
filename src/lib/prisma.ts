@@ -1,11 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { env } from "@/lib/env";
 
-const url = process.env.DATABASE_URL;
-if (!url) {
-  throw new Error("DATABASE_URL es obligatoria para el cliente Prisma.");
-}
-const adapter = new PrismaMariaDb(url);
+const adapter = new PrismaMariaDb(env.DATABASE_URL);
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 export const prisma =
