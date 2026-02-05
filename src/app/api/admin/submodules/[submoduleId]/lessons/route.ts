@@ -33,6 +33,7 @@ export async function GET(_request: Request, { params }: Params) {
     title: l.title,
     content: l.content,
     order: l.order,
+    difficulty: l.difficulty,
     exercisesCount: l._count.exercises,
     createdAt: l.createdAt,
   }));
@@ -54,9 +55,11 @@ export async function POST(request: Request, { params }: Params) {
     );
   }
 
+  const VALID_DIFFICULTY = ["APRENDIZ", "JUNIOR", "MID", "SENIOR", "ESPECIALISTA"] as const;
+
   try {
     const body = await request.json();
-    const { title, content, order } = body;
+    const { title, content, order, difficulty } = body;
 
     if (!title || typeof title !== "string" || !title.trim()) {
       return NextResponse.json(
@@ -64,6 +67,11 @@ export async function POST(request: Request, { params }: Params) {
         { status: 400 }
       );
     }
+
+    const difficultyValue =
+      difficulty != null && typeof difficulty === "string" && VALID_DIFFICULTY.includes(difficulty as typeof VALID_DIFFICULTY[number])
+        ? difficulty
+        : undefined;
 
     const lesson = await prisma.lesson.create({
       data: {
@@ -73,6 +81,7 @@ export async function POST(request: Request, { params }: Params) {
           content != null && typeof content === "string" ? content : "",
         order:
           typeof order === "number" && Number.isInteger(order) ? order : 0,
+        ...(difficultyValue !== undefined && { difficulty: difficultyValue }),
       },
     });
 

@@ -19,14 +19,17 @@ export async function PUT(request: Request, { params }: Params) {
     );
   }
 
+  const VALID_DIFFICULTY = ["APRENDIZ", "JUNIOR", "MID", "SENIOR", "ESPECIALISTA"] as const;
+
   try {
     const body = await request.json();
-    const { title, content, order } = body;
+    const { title, content, order, difficulty } = body;
 
     const data: {
       title?: string;
       content?: string;
       order?: number;
+      difficulty?: string | null;
     } = {};
     if (title !== undefined) {
       if (typeof title !== "string" || !title.trim()) {
@@ -48,6 +51,18 @@ export async function PUT(request: Request, { params }: Params) {
         );
       }
       data.order = order;
+    }
+    if (difficulty !== undefined) {
+      if (difficulty === null || difficulty === "") {
+        data.difficulty = null;
+      } else if (typeof difficulty === "string" && VALID_DIFFICULTY.includes(difficulty as typeof VALID_DIFFICULTY[number])) {
+        data.difficulty = difficulty;
+      } else {
+        return NextResponse.json(
+          { error: "Dificultad no válida; usa APRENDIZ, JUNIOR, MID, SENIOR o ESPECIALISTA" },
+          { status: 400 }
+        );
+      }
     }
 
     const lesson = await prisma.lesson.update({

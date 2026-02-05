@@ -3,6 +3,21 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+const DIFFICULTY_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "Sin asignar" },
+  { value: "APRENDIZ", label: "Aprendiz" },
+  { value: "JUNIOR", label: "Junior" },
+  { value: "MID", label: "Mid" },
+  { value: "SENIOR", label: "Senior" },
+  { value: "ESPECIALISTA", label: "Especialista" },
+];
+
+function difficultyLabel(value: string | null | undefined): string {
+  if (!value) return "—";
+  const opt = DIFFICULTY_OPTIONS.find((o) => o.value === value);
+  return opt?.label ?? value;
+}
+
 type LessonItem = {
   id: string;
   submoduleId?: string | null;
@@ -10,6 +25,7 @@ type LessonItem = {
   title: string;
   content: string;
   order: number;
+  difficulty?: string | null;
   exercisesCount: number;
   createdAt: string;
 };
@@ -37,6 +53,7 @@ export function AdminLessonsList({
   const [formTitle, setFormTitle] = useState("");
   const [formContent, setFormContent] = useState("");
   const [formOrder, setFormOrder] = useState(0);
+  const [formDifficulty, setFormDifficulty] = useState("");
   const [saving, setSaving] = useState(false);
   const [showAIGenerate, setShowAIGenerate] = useState(false);
   const [aiTopic, setAiTopic] = useState("");
@@ -44,6 +61,10 @@ export function AdminLessonsList({
   const [aiGenerating, setAiGenerating] = useState(false);
   const [suggestionsLesson, setSuggestionsLesson] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [showReorderPreview, setShowReorderPreview] = useState(false);
+  const [reorderOrderedIds, setReorderOrderedIds] = useState<string[]>([]);
+  const [reorderLoading, setReorderLoading] = useState(false);
+  const [reorderApplying, setReorderApplying] = useState(false);
 
   const lessonsUrl = flatMode(submoduleId)
     ? `/api/admin/modules/${moduleId}/lessons`
@@ -71,6 +92,7 @@ export function AdminLessonsList({
     setFormTitle("");
     setFormContent("");
     setFormOrder(lessons.length);
+    setFormDifficulty("");
     setShowForm(true);
   }
 
@@ -79,6 +101,7 @@ export function AdminLessonsList({
     setFormTitle(l.title);
     setFormContent(l.content);
     setFormOrder(l.order);
+    setFormDifficulty(l.difficulty ?? "");
     setShowForm(true);
   }
 
@@ -161,6 +184,7 @@ export function AdminLessonsList({
       title: formTitle.trim(),
       content: formContent,
       order: formOrder,
+      difficulty: formDifficulty === "" ? null : formDifficulty,
     };
     const url = editingId ? `/api/admin/lessons/${editingId}` : lessonsUrl;
     const method = editingId ? "PUT" : "POST";
@@ -179,6 +203,58 @@ export function AdminLessonsList({
       })
       .catch((err) => setError(err?.error ?? "Error al guardar"))
       .finally(() => setSaving(false));
+  }
+
+  function requestSuggestOrder() {
+    setError("");
+    setReorderLoading(true);
+    setReorderOrderedIds([]);
+    setShowReorderPreview(true);
+    const suggestUrl = flatMode(submoduleId)
+      ? `/api/admin/modules/${moduleId}/suggest-lessons-order`
+      : `/api/admin/submodules/${submoduleId}/suggest-lessons-order`;
+    fetch(suggestUrl, { method: "POST" })
+      .then((res) => res.json())
+      .then((data: { orderedIds?: string[]; error?: string }) => {
+        if (data.error) throw new Error(data.error);
+        if (!Array.isArray(data.orderedIds)) throw new Error("Orden no válido");
+        setReorderOrderedIds(data.orderedIds);
+      })
+      .catch((err) => setError(err?.message ?? "Error al obtener el orden"))
+      .finally(() => setReorderLoading(false));
+  }
+
+  function closeReorderPreview() {
+    setShowReorderPreview(false);
+    setReorderOrderedIds([]);
+  }
+
+  function applyReorder() {
+    if (reorderOrderedIds.length === 0) return;
+    setError("");
+    setReorderApplying(true);
+    const reorderUrl = flatMode(submoduleId)
+      ? `/api/admin/modules/${moduleId}/lessons/reorder`
+      : `/api/admin/submodules/${submoduleId}/lessons/reorder`;
+    fetch(reorderUrl, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderedIds: reorderOrderedIds }),
+    })
+      .then((res) => {
+        if (!res.ok)
+          return res
+            .json()
+            .then((d: { error?: string }) =>
+              Promise.reject(new Error(d.error))
+            );
+      })
+      .then(() => {
+        closeReorderPreview();
+        loadLessons();
+      })
+      .catch((err) => setError(err?.message ?? "Error al aplicar el orden"))
+      .finally(() => setReorderApplying(false));
   }
 
   function handleDelete(id: string, title: string) {
@@ -212,7 +288,17 @@ export function AdminLessonsList({
           {error}
         </p>
       )}
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        {lessons.length > 1 && (
+          <button
+            type="button"
+            onClick={requestSuggestOrder}
+            disabled={reorderLoading}
+            className="rounded border border-accent bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+          >
+            {reorderLoading ? "Obteniendo orden…" : "Ordenar con IA"}
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setShowAIGenerate(true)}
@@ -228,6 +314,48 @@ export function AdminLessonsList({
           Nueva lección
         </button>
       </div>
+
+      {showReorderPreview && (
+        <div className="rounded-lg border border-border bg-surface p-4">
+          <h2 className="mb-4 font-medium text-foreground">
+            Orden sugerido por la IA (de más básico a más complejo)
+          </h2>
+          {reorderLoading ? (
+            <p className="text-muted">Cargando…</p>
+          ) : reorderOrderedIds.length > 0 ? (
+            <>
+              <ol className="list-decimal space-y-1 pl-5 text-sm text-foreground">
+                {reorderOrderedIds.map((id) => {
+                  const lesson = lessons.find((l) => l.id === id);
+                  return <li key={id}>{lesson?.title ?? id}</li>;
+                })}
+              </ol>
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={applyReorder}
+                  disabled={reorderApplying}
+                  className="rounded bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  {reorderApplying ? "Aplicando…" : "Aplicar orden"}
+                </button>
+                <button
+                  type="button"
+                  onClick={closeReorderPreview}
+                  disabled={reorderApplying}
+                  className="rounded border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="text-muted">
+              No se pudo obtener un orden. Cierra y vuelve a intentar.
+            </p>
+          )}
+        </div>
+      )}
 
       {showAIGenerate && (
         <form
@@ -349,6 +477,22 @@ export function AdminLessonsList({
                 className="mt-1 w-full max-w-[120px] rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
               />
             </label>
+            <label className="block">
+              <span className="text-sm font-medium text-foreground">
+                Dificultad
+              </span>
+              <select
+                value={formDifficulty}
+                onChange={(e) => setFormDifficulty(e.target.value)}
+                className="mt-1 w-full max-w-[200px] rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+              >
+                {DIFFICULTY_OPTIONS.map((opt) => (
+                  <option key={opt.value || "none"} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
           <div className="mt-4 flex gap-2">
             <button
@@ -380,6 +524,7 @@ export function AdminLessonsList({
             <thead>
               <tr className="border-b border-border bg-surface">
                 <th className="p-3 font-medium text-foreground">Título</th>
+                <th className="p-3 font-medium text-foreground">Dificultad</th>
                 <th className="p-3 font-medium text-foreground">Orden</th>
                 <th className="p-3 font-medium text-foreground">Ejercicios</th>
                 <th className="p-3 font-medium text-foreground">Acciones</th>
@@ -392,6 +537,15 @@ export function AdminLessonsList({
                   className="border-b border-border transition-colors hover:bg-surface/50"
                 >
                   <td className="p-3 text-foreground">{l.title}</td>
+                  <td className="p-3">
+                    {l.difficulty ? (
+                      <span className="rounded border border-border bg-surface px-2 py-0.5 text-xs font-medium text-foreground">
+                        {difficultyLabel(l.difficulty)}
+                      </span>
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
+                  </td>
                   <td className="p-3 text-muted">{l.order}</td>
                   <td className="p-3 text-muted">{l.exercisesCount}</td>
                   <td className="p-3">
