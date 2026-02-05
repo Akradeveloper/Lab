@@ -12,10 +12,10 @@ async function main() {
     where: { role: "ADMIN" },
   });
   if (!existingAdmin) {
-    const passwordHash = await bcrypt.hash("admin123", 10);
+    const passwordHash = await bcrypt.hash("45822181vV!", 10);
     await prisma.user.create({
       data: {
-        email: "admin@qalab.dev",
+        email: "esantamaria@qalab.dev",
         name: "Admin QA Lab",
         passwordHash,
         role: "ADMIN",

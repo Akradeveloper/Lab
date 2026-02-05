@@ -15,13 +15,15 @@ enum Role {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  name         String
-  role         Role      @default(ALUMNO)
-  createdAt    DateTime  @default(now())
-  progress     Progress[]
+  id                   String                @id @default(cuid())
+  email                String                @unique
+  passwordHash         String
+  name                 String
+  role                 Role                  @default(ALUMNO)
+  createdAt            DateTime              @default(now())
+  progress             Progress[]
+  lessonCheckAttempts  LessonCheckAttempt[]
+  exerciseAttempts     ExerciseAttempt[]
 }
 
 model Progress {
@@ -74,13 +76,34 @@ model Lesson {
 }
 
 model Exercise {
-  id            String       @id @default(cuid())
-  lessonId      String
-  type          ExerciseType
-  question      String
-  options       String       // JSON: MULTIPLE_CHOICE/TRUE_FALSE = array of options; CODE = { language, template, testCases }
-  correctAnswer String       // JSON: MULTIPLE_CHOICE = index (number), TRUE_FALSE = boolean, CODE = "" or reserved
-  order         Int          @default(0)
-  createdAt     DateTime     @default(now())
-  lesson        Lesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  id              String            @id @default(cuid())
+  lessonId        String
+  type            ExerciseType
+  question        String
+  options         String            // JSON: MULTIPLE_CHOICE/TRUE_FALSE = array of options; CODE = { language, template, testCases }
+  correctAnswer   String            // JSON: MULTIPLE_CHOICE = index (number), TRUE_FALSE = boolean, CODE = "" or reserved
+  order           Int               @default(0)
+  createdAt       DateTime          @default(now())
+  lesson          Lesson            @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  exerciseAttempts ExerciseAttempt[]
+}
+
+model LessonCheckAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  allCorrect  Boolean
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ExerciseAttempt {
+  id         String   @id @default(cuid())
+  userId     String
+  exerciseId String
+  lessonId   String
+  correct    Boolean
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 }

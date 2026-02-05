@@ -46,6 +46,25 @@ export async function POST(request: Request, { params }: Params) {
       if (!correct) allCorrect = false;
     }
 
+    const userId = session.user.id;
+    try {
+      await prisma.lessonCheckAttempt.create({
+        data: { userId, lessonId, allCorrect },
+      });
+      await prisma.exerciseAttempt.createMany({
+        data: results.map((r) => ({
+          userId,
+          exerciseId: r.exerciseId,
+          lessonId,
+          correct: r.correct,
+        })),
+      });
+    } catch (err) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error al guardar intentos:", err);
+      }
+    }
+
     return NextResponse.json({
       allCorrect,
       results,

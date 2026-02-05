@@ -1,8 +1,6 @@
 ---
-description: Contexto del proyecto QA Lab para el asistente
 alwaysApply: true
 ---
-
 # QA Lab - Contexto del proyecto
 
 - **Proyecto:** QA Lab. Web tipo FreeCodeCamp enfocada en QA (testing y calidad de software). Los alumnos siguen cursos y el admin ve su progreso.
