@@ -7,7 +7,13 @@ import { prisma } from "@/lib/prisma";
 import { LessonContent } from "@/components/lesson-content";
 import { LessonExercises } from "@/components/lesson-exercises";
 
-type Props = { params: Promise<{ moduleId: string; lessonId: string }> };
+type Props = {
+  params: Promise<{
+    moduleId: string;
+    submoduleId: string;
+    lessonId: string;
+  }>;
+};
 
 export async function generateMetadata({ params }: Props) {
   const { lessonId } = await params;
@@ -24,12 +30,17 @@ export default async function LessonPage({ params }: Props) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
-  const { moduleId, lessonId } = await params;
+  const { moduleId, submoduleId, lessonId } = await params;
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
     include: {
-      module: { select: { id: true, title: true } },
-      submodule: { select: { id: true } },
+      submodule: {
+        select: {
+          id: true,
+          title: true,
+          module: { select: { id: true, title: true } },
+        },
+      },
       exercises: {
         orderBy: { order: "asc" },
         select: {
@@ -43,15 +54,13 @@ export default async function LessonPage({ params }: Props) {
     },
   });
 
-  if (!lesson) notFound();
-
-  if (lesson.submoduleId != null) {
-    redirect(
-      `/modulos/${moduleId}/submodulos/${lesson.submoduleId}/lecciones/${lessonId}`
-    );
-  }
-
-  if (lesson.moduleId !== moduleId) notFound();
+  if (
+    !lesson ||
+    lesson.submoduleId !== submoduleId ||
+    !lesson.submodule ||
+    lesson.submodule.module.id !== moduleId
+  )
+    notFound();
 
   const exercisesForClient = lesson.exercises
     .filter(
@@ -66,25 +75,74 @@ export default async function LessonPage({ params }: Props) {
       order: e.order,
     }));
 
-  const nextInModule = await prisma.lesson.findFirst({
-    where: { moduleId, order: { gt: lesson.order } },
+  // Siguiente: misma submódulo, siguiente por order; si no hay, primera lección del siguiente submódulo
+  let nextLesson: {
+    id: string;
+    title: string;
+    submoduleId: string | null;
+  } | null = null;
+  const nextInSub = await prisma.lesson.findFirst({
+    where: { submoduleId, order: { gt: lesson.order } },
     orderBy: { order: "asc" },
-    select: { id: true, title: true },
+    select: { id: true, title: true, submoduleId: true },
   });
-  const prevInModule = await prisma.lesson.findFirst({
-    where: { moduleId, order: { lt: lesson.order } },
+  if (nextInSub) {
+    nextLesson = nextInSub;
+  } else {
+    const currentSub = await prisma.submodule.findUnique({
+      where: { id: submoduleId },
+      select: { order: true },
+    });
+    const nextSub = await prisma.submodule.findFirst({
+      where: { moduleId, order: { gt: currentSub?.order ?? -1 } },
+      orderBy: { order: "asc" },
+      select: { id: true },
+    });
+    if (nextSub) {
+      const firstInNext = await prisma.lesson.findFirst({
+        where: { submoduleId: nextSub.id },
+        orderBy: { order: "asc" },
+        select: { id: true, title: true, submoduleId: true },
+      });
+      if (firstInNext) nextLesson = firstInNext;
+    }
+  }
+
+  // Anterior: misma submódulo, anterior por order; si no hay, última lección del submódulo anterior
+  let prevLesson: {
+    id: string;
+    title: string;
+    submoduleId: string | null;
+  } | null = null;
+  const prevInSub = await prisma.lesson.findFirst({
+    where: { submoduleId, order: { lt: lesson.order } },
     orderBy: { order: "desc" },
-    select: { id: true, title: true },
+    select: { id: true, title: true, submoduleId: true },
   });
+  if (prevInSub) {
+    prevLesson = prevInSub;
+  } else {
+    const currentSub = await prisma.submodule.findUnique({
+      where: { id: submoduleId },
+      select: { order: true },
+    });
+    const prevSub = await prisma.submodule.findFirst({
+      where: { moduleId, order: { lt: currentSub?.order ?? 999 } },
+      orderBy: { order: "desc" },
+      select: { id: true },
+    });
+    if (prevSub) {
+      const lastInPrev = await prisma.lesson.findFirst({
+        where: { submoduleId: prevSub.id },
+        orderBy: { order: "desc" },
+        select: { id: true, title: true, submoduleId: true },
+      });
+      if (lastInPrev) prevLesson = lastInPrev;
+    }
+  }
 
-  const nextLesson = nextInModule
-    ? { id: nextInModule.id, title: nextInModule.title }
-    : null;
-  const prevLesson = prevInModule
-    ? { id: prevInModule.id, title: prevInModule.title }
-    : null;
-
-  const mod = lesson.module!;
+  const mod = lesson.submodule.module;
+  const sub = lesson.submodule;
 
   return (
     <div className="min-h-screen bg-background">
@@ -104,6 +162,13 @@ export default async function LessonPage({ params }: Props) {
           >
             {mod.title}
           </Link>
+          <span className="mx-2">/</span>
+          <Link
+            href={`/modulos/${moduleId}/submodulos/${submoduleId}`}
+            className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
+          >
+            {sub.title}
+          </Link>
         </nav>
 
         <article className="mb-8">
@@ -120,8 +185,8 @@ export default async function LessonPage({ params }: Props) {
           exercises={exercisesForClient}
           nextLesson={nextLesson}
           prevLesson={prevLesson}
-          backHref={`/modulos/${moduleId}`}
-          backLabel="Volver al módulo"
+          backHref={`/modulos/${moduleId}/submodulos/${submoduleId}`}
+          backLabel="Volver al submódulo"
         />
       </main>
     </div>

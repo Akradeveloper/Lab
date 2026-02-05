@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-type ModuleItem = {
+type SubmoduleItem = {
   id: string;
+  moduleId: string;
   title: string;
   description: string | null;
   order: number;
@@ -12,8 +13,10 @@ type ModuleItem = {
   createdAt: string;
 };
 
-export function AdminModulesList() {
-  const [modules, setModules] = useState<ModuleItem[]>([]);
+type Props = { moduleId: string; moduleTitle: string };
+
+export function AdminSubmodulesList({ moduleId, moduleTitle }: Props) {
+  const [submodules, setSubmodules] = useState<SubmoduleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -23,36 +26,36 @@ export function AdminModulesList() {
   const [formOrder, setFormOrder] = useState(0);
   const [saving, setSaving] = useState(false);
 
-  function loadModules() {
+  function loadSubmodules() {
     setLoading(true);
     setError("");
-    fetch("/api/admin/modules")
+    fetch(`/api/admin/modules/${moduleId}/submodules`)
       .then((res) => {
-        if (!res.ok) throw new Error("Error al cargar módulos");
+        if (!res.ok) throw new Error("Error al cargar submódulos");
         return res.json();
       })
-      .then(setModules)
+      .then(setSubmodules)
       .catch(() => setError("No se pudo cargar el listado"))
       .finally(() => setLoading(false));
   }
 
   useEffect(() => {
-    loadModules();
-  }, []);
+    loadSubmodules();
+  }, [moduleId]);
 
   function openCreate() {
     setEditingId(null);
     setFormTitle("");
     setFormDescription("");
-    setFormOrder(modules.length);
+    setFormOrder(submodules.length);
     setShowForm(true);
   }
 
-  function openEdit(m: ModuleItem) {
-    setEditingId(m.id);
-    setFormTitle(m.title);
-    setFormDescription(m.description ?? "");
-    setFormOrder(m.order);
+  function openEdit(s: SubmoduleItem) {
+    setEditingId(s.id);
+    setFormTitle(s.title);
+    setFormDescription(s.description ?? "");
+    setFormOrder(s.order);
     setShowForm(true);
   }
 
@@ -70,8 +73,8 @@ export function AdminModulesList() {
       order: formOrder,
     };
     const url = editingId
-      ? `/api/admin/modules/${editingId}`
-      : "/api/admin/modules";
+      ? `/api/admin/submodules/${editingId}`
+      : `/api/admin/modules/${moduleId}/submodules`;
     const method = editingId ? "PUT" : "POST";
     fetch(url, {
       method,
@@ -84,7 +87,7 @@ export function AdminModulesList() {
       })
       .then(() => {
         closeForm();
-        loadModules();
+        loadSubmodules();
       })
       .catch((err) => setError(err?.error ?? "Error al guardar"))
       .finally(() => setSaving(false));
@@ -93,15 +96,15 @@ export function AdminModulesList() {
   function handleDelete(id: string, title: string) {
     if (
       !confirm(
-        `¿Eliminar el módulo "${title}"? Se borrarán todas sus lecciones y ejercicios.`
+        `¿Eliminar el submódulo "${title}"? Se borrarán todas sus lecciones y ejercicios.`
       )
     )
       return;
     setError("");
-    fetch(`/api/admin/modules/${id}`, { method: "DELETE" })
+    fetch(`/api/admin/submodules/${id}`, { method: "DELETE" })
       .then((res) => {
         if (!res.ok) return res.json().then((d) => Promise.reject(d));
-        loadModules();
+        loadSubmodules();
       })
       .catch((err) => setError(err?.error ?? "Error al eliminar"));
   }
@@ -127,7 +130,7 @@ export function AdminModulesList() {
           onClick={openCreate}
           className="rounded border border-accent bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          Nuevo módulo
+          Nuevo submódulo
         </button>
       </div>
 
@@ -137,7 +140,7 @@ export function AdminModulesList() {
           className="rounded-lg border border-border bg-surface p-4"
         >
           <h2 className="mb-4 font-medium text-foreground">
-            {editingId ? "Editar módulo" : "Nuevo módulo"}
+            {editingId ? "Editar submódulo" : "Nuevo submódulo"}
           </h2>
           <div className="space-y-3">
             <label className="block">
@@ -195,9 +198,9 @@ export function AdminModulesList() {
         </form>
       )}
 
-      {modules.length === 0 && !showForm ? (
+      {submodules.length === 0 && !showForm ? (
         <p className="rounded border border-border px-4 py-8 text-center text-muted">
-          No hay módulos. Crea uno con &quot;Nuevo módulo&quot;.
+          No hay submódulos. Crea uno con &quot;Nuevo submódulo&quot;.
         </p>
       ) : (
         <div className="overflow-x-auto rounded border border-border">
@@ -212,34 +215,34 @@ export function AdminModulesList() {
               </tr>
             </thead>
             <tbody>
-              {modules.map((m) => (
+              {submodules.map((s) => (
                 <tr
-                  key={m.id}
+                  key={s.id}
                   className="border-b border-border transition-colors hover:bg-surface/50"
                 >
-                  <td className="p-3 text-foreground">{m.title}</td>
+                  <td className="p-3 text-foreground">{s.title}</td>
                   <td className="max-w-[200px] truncate p-3 text-muted">
-                    {m.description ?? "—"}
+                    {s.description ?? "—"}
                   </td>
-                  <td className="p-3 text-muted">{m.order}</td>
-                  <td className="p-3 text-muted">{m.lessonsCount}</td>
+                  <td className="p-3 text-muted">{s.order}</td>
+                  <td className="p-3 text-muted">{s.lessonsCount}</td>
                   <td className="p-3">
                     <Link
-                      href={`/admin/curriculum/${m.id}`}
+                      href={`/admin/curriculum/${moduleId}/submodules/${s.id}`}
                       className="mr-2 text-accent transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
                     >
-                      Gestionar submódulos
+                      Lecciones
                     </Link>
                     <button
                       type="button"
-                      onClick={() => openEdit(m)}
+                      onClick={() => openEdit(s)}
                       className="mr-2 text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
                     >
                       Editar
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDelete(m.id, m.title)}
+                      onClick={() => handleDelete(s.id, s.title)}
                       className="text-error transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
                     >
                       Eliminar

@@ -17,6 +17,15 @@ export default async function ModulosPage() {
   const modules = await prisma.module.findMany({
     orderBy: { order: "asc" },
     include: {
+      submodules: {
+        orderBy: { order: "asc" },
+        include: {
+          lessons: {
+            orderBy: { order: "asc" },
+            select: { id: true, title: true, order: true },
+          },
+        },
+      },
       lessons: {
         orderBy: { order: "asc" },
         select: { id: true, title: true, order: true },
@@ -50,10 +59,14 @@ export default async function ModulosPage() {
         ) : (
           <ul className="space-y-4">
             {modules.map((mod) => {
-              const completedCount = mod.lessons.filter((l) =>
+              const allLessons =
+                mod.submodules.length > 0
+                  ? mod.submodules.flatMap((s) => s.lessons)
+                  : mod.lessons;
+              const completedCount = allLessons.filter((l) =>
                 completedSet.has(`${mod.id}:${l.id}`)
               ).length;
-              const totalCount = mod.lessons.length;
+              const totalCount = allLessons.length;
               return (
                 <li key={mod.id}>
                   <Link

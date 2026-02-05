@@ -39,6 +39,7 @@ export async function POST(request: Request, { params }: Params) {
     let allCorrect = true;
 
     for (const ex of exercises) {
+      if (ex.type === "CODE") continue;
       const userAnswer = answers[ex.id];
       const correct = isAnswerCorrect(ex, userAnswer);
       results.push({ exerciseId: ex.id, correct });

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { Header } from "@/components/Header";
 import { prisma } from "@/lib/prisma";
+import { AdminSubmodulesList } from "./admin-submodules-list";
 import { AdminLessonsList } from "./admin-lessons-list";
 
 type Props = { params: Promise<{ moduleId: string }> };
@@ -19,17 +20,19 @@ export async function generateMetadata({ params }: Props) {
   };
 }
 
-export default async function AdminModuleLessonsPage({ params }: Props) {
+export default async function AdminModulePage({ params }: Props) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "ADMIN") redirect("/dashboard");
 
   const { moduleId } = await params;
   const module_ = await prisma.module.findUnique({
     where: { id: moduleId },
-    select: { id: true, title: true },
+    include: { submodules: { orderBy: { order: "asc" } } },
   });
 
   if (!module_) notFound();
+
+  const hasSubmodules = module_.submodules.length > 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -46,8 +49,25 @@ export default async function AdminModuleLessonsPage({ params }: Props) {
         <h1 className="mb-2 text-2xl font-semibold text-foreground">
           {module_.title}
         </h1>
-        <p className="mb-6 text-muted">Lecciones del módulo</p>
-        <AdminLessonsList moduleId={moduleId} moduleTitle={module_.title} />
+        {hasSubmodules ? (
+          <>
+            <p className="mb-6 text-muted">Submódulos del módulo</p>
+            <AdminSubmodulesList
+              moduleId={moduleId}
+              moduleTitle={module_.title}
+            />
+          </>
+        ) : (
+          <>
+            <p className="mb-6 text-muted">Lecciones del módulo</p>
+            <AdminLessonsList
+              moduleId={moduleId}
+              moduleTitle={module_.title}
+              submoduleId={null}
+              submoduleTitle={null}
+            />
+          </>
+        )}
       </main>
     </div>
   );

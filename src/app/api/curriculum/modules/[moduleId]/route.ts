@@ -24,6 +24,15 @@ export async function GET(_request: Request, { params }: Params) {
   const module_ = await prisma.module.findUnique({
     where: { id: moduleId },
     include: {
+      submodules: {
+        orderBy: { order: "asc" },
+        include: {
+          lessons: {
+            orderBy: { order: "asc" },
+            select: { id: true, title: true, order: true },
+          },
+        },
+      },
       lessons: {
         orderBy: { order: "asc" },
         select: { id: true, title: true, order: true },
@@ -42,20 +51,49 @@ export async function GET(_request: Request, { params }: Params) {
 
   const completedLessonIds = new Set(progress.map((p) => p.lessonId));
 
-  const lessons = module_.lessons.map((l) => ({
-    id: l.id,
-    title: l.title,
-    order: l.order,
-    completed: completedLessonIds.has(l.id),
+  let totalCount = 0;
+  let completedCount = 0;
+  const submodules = module_.submodules.map((sub) => ({
+    id: sub.id,
+    title: sub.title,
+    description: sub.description,
+    order: sub.order,
+    lessons: sub.lessons.map((l) => {
+      const completed = completedLessonIds.has(l.id);
+      if (completed) completedCount++;
+      totalCount++;
+      return {
+        id: l.id,
+        title: l.title,
+        order: l.order,
+        completed,
+      };
+    }),
   }));
+
+  const lessons =
+    module_.submodules.length === 0
+      ? module_.lessons.map((l) => {
+          const completed = completedLessonIds.has(l.id);
+          if (completed) completedCount++;
+          totalCount++;
+          return {
+            id: l.id,
+            title: l.title,
+            order: l.order,
+            completed,
+          };
+        })
+      : [];
 
   return NextResponse.json({
     id: module_.id,
     title: module_.title,
     description: module_.description,
     order: module_.order,
+    submodules,
     lessons,
-    completedCount: lessons.filter((l) => l.completed).length,
-    totalCount: lessons.length,
+    completedCount,
+    totalCount,
   });
 }

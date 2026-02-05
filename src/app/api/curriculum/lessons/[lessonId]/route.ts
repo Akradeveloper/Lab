@@ -23,6 +23,13 @@ export async function GET(_request: Request, { params }: Params) {
     where: { id: lessonId },
     include: {
       module: { select: { id: true, title: true } },
+      submodule: {
+        select: {
+          id: true,
+          title: true,
+          module: { select: { id: true, title: true } },
+        },
+      },
       exercises: {
         orderBy: { order: "asc" },
         select: {
@@ -43,18 +50,28 @@ export async function GET(_request: Request, { params }: Params) {
     );
   }
 
-  const exercises = lesson.exercises.map((e) => ({
-    id: e.id,
-    type: e.type,
-    question: e.question,
-    options: parseOptions(e.options),
-    order: e.order,
-  }));
+  const exercises = lesson.exercises
+    .filter((e) => e.type === "MULTIPLE_CHOICE" || e.type === "TRUE_FALSE")
+    .map((e) => ({
+      id: e.id,
+      type: e.type,
+      question: e.question,
+      options: parseOptions(e.options),
+      order: e.order,
+    }));
+
+  const moduleId = lesson.submodule?.module?.id ?? lesson.module?.id ?? "";
+  const module_ = lesson.submodule?.module ?? lesson.module;
+  const submodule = lesson.submodule
+    ? { id: lesson.submodule.id, title: lesson.submodule.title }
+    : null;
 
   return NextResponse.json({
     id: lesson.id,
-    moduleId: lesson.moduleId,
-    module: lesson.module,
+    moduleId,
+    submoduleId: lesson.submoduleId,
+    module: module_ ?? null,
+    submodule,
     title: lesson.title,
     content: lesson.content,
     order: lesson.order,

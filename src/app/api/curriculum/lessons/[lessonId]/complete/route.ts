@@ -24,7 +24,11 @@ export async function POST(_request: Request, { params }: Params) {
   try {
     const lesson = await prisma.lesson.findUnique({
       where: { id: lessonId },
-      select: { id: true, moduleId: true },
+      select: {
+        id: true,
+        moduleId: true,
+        submodule: { select: { moduleId: true } },
+      },
     });
 
     if (!lesson) {
@@ -34,10 +38,12 @@ export async function POST(_request: Request, { params }: Params) {
       );
     }
 
+    const courseId = lesson.submodule?.moduleId ?? lesson.moduleId ?? "";
+
     const existing = await prisma.progress.findFirst({
       where: {
         userId,
-        courseId: lesson.moduleId,
+        courseId,
         lessonId: lesson.id,
       },
     });
@@ -49,7 +55,7 @@ export async function POST(_request: Request, { params }: Params) {
     await prisma.progress.create({
       data: {
         userId,
-        courseId: lesson.moduleId,
+        courseId,
         lessonId: lesson.id,
       },
     });
