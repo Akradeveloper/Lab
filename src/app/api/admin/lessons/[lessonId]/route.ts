@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
+import type { DifficultyLevel, Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -52,7 +52,7 @@ export async function PUT(request: Request, { params }: Params) {
       if (difficulty === null || difficulty === "") {
         data.difficulty = null;
       } else if (typeof difficulty === "string" && VALID_DIFFICULTY.includes(difficulty as typeof VALID_DIFFICULTY[number])) {
-        data.difficulty = difficulty as Prisma.DifficultyLevel;
+        data.difficulty = difficulty as DifficultyLevel;
       } else {
         return NextResponse.json(
           { error: "Dificultad no válida; usa APRENDIZ, JUNIOR, MID, SENIOR o ESPECIALISTA" },
