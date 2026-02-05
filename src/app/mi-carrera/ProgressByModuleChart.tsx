@@ -67,14 +67,15 @@ export function ProgressByModuleChart({ data }: Props) {
               border: "1px solid var(--border)",
               borderRadius: "8px",
             }}
-            formatter={(value: number, name: string) => {
+            formatter={(value, name) => {
+              const n = name ?? "";
               const label =
-                name === "completedCount"
+                n === "completedCount"
                   ? "Completadas"
-                  : name === "pendientes"
+                  : n === "pendientes"
                   ? "Pendientes"
-                  : name;
-              return [value, label];
+                  : n;
+              return [value ?? 0, label];
             }}
             labelFormatter={(_, payload) =>
               payload?.[0]?.payload?.moduleTitle ?? ""

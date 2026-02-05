@@ -61,11 +61,16 @@ export function ProgressTimeChart({ data }: Props) {
               borderRadius: "8px",
             }}
             labelStyle={{ color: "var(--foreground)" }}
-            labelFormatter={formatLabel}
-            formatter={(value: number) => [
-              `${value} ${value === 1 ? "lección" : "lecciones"}`,
-              "Completadas",
-            ]}
+            labelFormatter={(label) =>
+              formatLabel(typeof label === "string" ? label : "")
+            }
+            formatter={(value) => {
+              const v = value ?? 0;
+              return [
+                `${v} ${v === 1 ? "lección" : "lecciones"}`,
+                "Completadas",
+              ];
+            }}
           />
           <Area
             type="monotone"

@@ -56,10 +56,10 @@ export function CompletionPieChart({ totalCompleted, totalLessons }: Props) {
               border: "1px solid var(--border)",
               borderRadius: "8px",
             }}
-            formatter={(value: number, name: string) => [
-              `${value} ${value === 1 ? "lección" : "lecciones"}`,
-              name,
-            ]}
+            formatter={(value, name) => {
+              const v = value ?? 0;
+              return [`${v} ${v === 1 ? "lección" : "lecciones"}`, name ?? ""];
+            }}
           />
           <Legend
             wrapperStyle={{ fontSize: 12 }}
