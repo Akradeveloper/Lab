@@ -38,8 +38,6 @@
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5",
-    "@tailwindcss/oxide-win32-x64-msvc": "^4.1.18",
-    "lightningcss-win32-x64-msvc": "^1.31.1"
+    "typescript": "^5"
   }
 }
