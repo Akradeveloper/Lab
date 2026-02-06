@@ -15,9 +15,12 @@
     "seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@marsidev/react-turnstile": "^1.4.2",
     "@prisma/adapter-mariadb": "^7.3.0",
     "@prisma/client": "^7.3.0",
+    "@tailwindcss/oxide-win32-x64-msvc": "^4.1.18",
     "bcryptjs": "^3.0.3",
+    "lightningcss-win32-x64-msvc": "^1.31.1",
     "next": "16.1.6",
     "next-auth": "^4.24.13",
     "openai": "^4.104.0",

@@ -51,7 +51,7 @@ export async function POST(request: Request, { params }: Params) {
         const solution = typeof ex.correctAnswer === "string" ? ex.correctAnswer : "";
         const correct =
           solution.trim() !== "" &&
-          normalizeCode(userCode) === normalizeCode(solution);
+          normalizeCode(String(userCode)) === normalizeCode(String(solution));
         results.push({ exerciseId: ex.id, correct });
         if (!correct) allCorrect = false;
         continue;
