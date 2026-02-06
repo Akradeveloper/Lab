@@ -2,30 +2,68 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { Spinner } from "@/components/Spinner";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const turnstileRef = useRef<TurnstileInstance | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
+  const [website, setWebsite] = useState(""); // Honeypot: no debe rellenarse
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  function getPasswordStrength(pwd: string): "weak" | "medium" | "strong" | null {
+    if (!pwd) return null;
+    if (pwd.length < 8) return "weak";
+    const hasUpper = /[A-Z]/.test(pwd);
+    const hasLower = /[a-z]/.test(pwd);
+    const hasNumber = /[0-9]/.test(pwd);
+    const hasSpecial = /[^A-Za-z0-9]/.test(pwd);
+    const criteria = [hasUpper, hasLower, hasNumber, hasSpecial].filter(Boolean).length;
+    if (criteria >= 4 && pwd.length >= 10) return "strong";
+    if (criteria >= 3 || pwd.length >= 8) return "medium";
+    return "weak";
+  }
+
+  const passwordStrength = getPasswordStrength(password);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (password !== confirmPassword) {
+      setError("Las contraseñas no coinciden");
+      return;
+    }
+    const turnstileToken = TURNSTILE_SITE_KEY ? turnstileRef.current?.getResponse() : undefined;
+    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+      setError("Completa la verificación de seguridad antes de continuar.");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+          confirmPassword,
+          website,
+          turnstileToken: turnstileToken ?? undefined,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error ?? "Error al registrarse");
+        turnstileRef.current?.reset();
         setLoading(false);
         return;
       }
@@ -33,6 +71,7 @@ export default function RegisterPage() {
       router.refresh();
     } catch {
       setError("Error de conexión");
+      turnstileRef.current?.reset();
       setLoading(false);
     }
   }
@@ -52,6 +91,22 @@ export default function RegisterPage() {
               {error}
             </p>
           )}
+          {/* Honeypot: oculto para usuarios, los bots suelen rellenarlo */}
+          <div
+            className="absolute -left-[9999px] h-0 w-0 overflow-hidden"
+            aria-hidden="true"
+          >
+            <label htmlFor="register-website">Sitio web</label>
+            <input
+              id="register-website"
+              type="text"
+              name="website"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              tabIndex={-1}
+              autoComplete="off"
+            />
+          </div>
           <label htmlFor="register-name" className="flex flex-col gap-1">
             <span className="text-sm font-medium text-foreground">Nombre</span>
             <input
@@ -78,7 +133,7 @@ export default function RegisterPage() {
           </label>
           <label htmlFor="register-password" className="flex flex-col gap-1">
             <span className="text-sm font-medium text-foreground">
-              Contraseña (mín. 6)
+              Contraseña
             </span>
             <input
               id="register-password"
@@ -86,11 +141,57 @@ export default function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
+              maxLength={128}
+              className="rounded-md border border-border bg-background px-3 py-2 text-foreground transition-colors duration-200 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+              autoComplete="new-password"
+            />
+            <span className="text-xs text-muted">
+              Mín. 8 caracteres, una mayúscula, una minúscula y un número
+            </span>
+            {passwordStrength && (
+              <span
+                className={`text-xs ${
+                  passwordStrength === "weak"
+                    ? "text-error"
+                    : passwordStrength === "medium"
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-green-600 dark:text-green-400"
+                }`}
+              >
+                Fortaleza:{" "}
+                {passwordStrength === "weak"
+                  ? "Débil"
+                  : passwordStrength === "medium"
+                    ? "Media"
+                    : "Fuerte"}
+              </span>
+            )}
+          </label>
+          <label htmlFor="register-confirm-password" className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-foreground">
+              Repetir contraseña
+            </span>
+            <input
+              id="register-confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              minLength={8}
               className="rounded-md border border-border bg-background px-3 py-2 text-foreground transition-colors duration-200 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
               autoComplete="new-password"
             />
           </label>
+          {TURNSTILE_SITE_KEY && (
+            <div className="flex justify-center">
+              <Turnstile
+                ref={turnstileRef}
+                siteKey={TURNSTILE_SITE_KEY}
+                options={{ theme: "auto", size: "normal" }}
+              />
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading}
