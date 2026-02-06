@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
+import { DescriptionMarkdown } from "@/components/description-markdown";
 import { Header } from "@/components/Header";
 import { prisma } from "@/lib/prisma";
 
@@ -70,7 +71,10 @@ export default async function SubmoduloLessonsPage({ params }: Props) {
           {submodule.title}
         </h1>
         {submodule.description && (
-          <p className="mb-4 text-muted">{submodule.description}</p>
+          <DescriptionMarkdown
+            content={submodule.description}
+            className="mb-4"
+          />
         )}
         <p className="mb-6 text-sm text-accent">
           {completedCount}/{totalCount} lecciones completadas

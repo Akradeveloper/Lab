@@ -1,7 +1,11 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import OpenAI from "openai";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
 
 type Params = { params: Promise<{ moduleId: string }> };
 
@@ -82,14 +86,44 @@ export async function POST(request: Request, { params }: Params) {
       );
     }
 
+    const userDescription =
+      description != null && typeof description === "string"
+        ? description.trim()
+        : "";
+    let finalDescription: string | null =
+      userDescription.length > 0 ? userDescription : null;
+
+    if (finalDescription === null && OPENAI_API_KEY?.trim()) {
+      try {
+        const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+        const completion = await openai.chat.completions.create({
+          model: OPENAI_MODEL,
+          messages: [
+            {
+              role: "system",
+              content:
+                "Eres un creador de contenido para un curso profesional de QA (Quality Assurance / testing). Respondes en español con tono formal y didáctico, sin coloquialismos y con términos técnicos precisos.\n\nLa descripción debe tener estructura en Markdown, sin usar ## (no uses encabezados de nivel 2). Usa **negritas** para las etiquetas y listas con guión (-).\n- **Objetivos** (o \"Qué aprenderás\"): lista con 2-4 ítems usando guiones (-).\n- **Contenido**: 1-2 frases que presenten el módulo/submódulo y su relevancia en QA.\n- Opcional: una frase de cierre.\n\nResponde únicamente con el Markdown de la descripción, sin JSON ni texto extra.",
+            },
+            {
+              role: "user",
+              content: `Genera la descripción para el siguiente submódulo de un curso de QA. Módulo: "${module_.title}". Submódulo: "${title.trim()}". Sigue la estructura indicada (Objetivos con lista, Contenido breve, cierre opcional).`,
+            },
+          ],
+        });
+        const content = completion.choices[0]?.message?.content?.trim();
+        if (content) finalDescription = content;
+      } catch (e) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error al generar descripción del submódulo con IA:", e);
+        }
+      }
+    }
+
     const submodule = await prisma.submodule.create({
       data: {
         moduleId,
         title: title.trim(),
-        description:
-          description != null && typeof description === "string"
-            ? description.trim()
-            : null,
+        description: finalDescription,
         order:
           typeof order === "number" && Number.isInteger(order) ? order : 0,
       },

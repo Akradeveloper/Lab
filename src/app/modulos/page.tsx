@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
+import { DescriptionMarkdown } from "@/components/description-markdown";
 import { Header } from "@/components/Header";
 import { prisma } from "@/lib/prisma";
 
@@ -77,9 +78,10 @@ export default async function ModulosPage() {
                       {mod.title}
                     </h2>
                     {mod.description && (
-                      <p className="mt-1 text-sm text-muted">
-                        {mod.description}
-                      </p>
+                      <DescriptionMarkdown
+                        content={mod.description}
+                        className="mt-1 text-sm"
+                      />
                     )}
                     <p className="mt-2 text-sm text-accent">
                       {completedCount}/{totalCount} lecciones completadas

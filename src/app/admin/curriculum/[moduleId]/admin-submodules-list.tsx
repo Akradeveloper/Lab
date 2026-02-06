@@ -25,6 +25,7 @@ export function AdminSubmodulesList({ moduleId, moduleTitle }: Props) {
   const [formDescription, setFormDescription] = useState("");
   const [formOrder, setFormOrder] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [generatingDescription, setGeneratingDescription] = useState(false);
 
   function loadSubmodules() {
     setLoading(true);
@@ -91,6 +92,30 @@ export function AdminSubmodulesList({ moduleId, moduleTitle }: Props) {
       })
       .catch((err) => setError(err?.error ?? "Error al guardar"))
       .finally(() => setSaving(false));
+  }
+
+  async function handleGenerateDescription() {
+    const title = formTitle.trim();
+    if (!title) return;
+    setError("");
+    setGeneratingDescription(true);
+    try {
+      const res = await fetch(
+        `/api/admin/modules/${moduleId}/submodules/generate-description`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Error al generar");
+      if (data.description) setFormDescription(data.description);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al generar la descripción con IA");
+    } finally {
+      setGeneratingDescription(false);
+    }
   }
 
   function handleDelete(id: string, title: string) {
@@ -165,6 +190,17 @@ export function AdminSubmodulesList({ moduleId, moduleTitle }: Props) {
                 rows={2}
                 className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
               />
+              <p className="mt-1 text-xs text-muted">
+                Si la dejas vacía, se generará automáticamente con IA.
+              </p>
+              <button
+                type="button"
+                onClick={handleGenerateDescription}
+                disabled={!formTitle.trim() || generatingDescription}
+                className="mt-2 rounded border border-accent bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                {generatingDescription ? "Generando…" : "Generar descripción con IA"}
+              </button>
             </label>
             <label className="block">
               <span className="text-sm font-medium text-foreground">Orden</span>
