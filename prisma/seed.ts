@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
-import bcrypt from "bcryptjs";
 import { getPrismaAdapterConfig } from "../src/lib/database-url";
 
 let config: ReturnType<typeof getPrismaAdapterConfig>;
@@ -15,24 +14,6 @@ const adapter = new PrismaMariaDb(config);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const existingAdmin = await prisma.user.findFirst({
-    where: { role: "ADMIN" },
-  });
-  if (!existingAdmin) {
-    const passwordHash = await bcrypt.hash("45822181vV!", 10);
-    await prisma.user.create({
-      data: {
-        email: "esantamaria@qalab.dev",
-        name: "Admin QA Lab",
-        passwordHash,
-        role: "ADMIN",
-      },
-    });
-    console.log("Admin de prueba creado: admin@qalab.dev / admin123");
-  } else {
-    console.log("Admin ya existe, omitiendo creación de admin.");
-  }
-
   // Seed de ejemplo: un módulo con un submódulo, 2 lecciones y ejercicios
   const existingModule = await prisma.module.findFirst({});
   if (!existingModule) {

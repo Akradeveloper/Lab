@@ -37,3 +37,7 @@ Para usar **Judge0** self-hosted en lugar de Piston:
 | `JUDGE0_AUTH_TOKEN` | Token de autenticación de Judge0 si tu instancia lo requiere. |
 
 Los pasos para montar Judge0 (p. ej. con Docker) suelen estar en el README del proyecto o en la carpeta `judge0-docker/` si existe en el repo.
+
+## Primer administrador
+
+No hay variables de entorno para crear el usuario admin. El primer administrador se crea registrándose en `/register` y luego asignando el rol `ADMIN` en la base de datos. Detalle en [Getting Started](./getting-started.md#primer-administrador).

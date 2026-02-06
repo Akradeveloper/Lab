@@ -14,7 +14,7 @@ Necesitas un servidor MySQL en marcha y `DATABASE_URL` en `.env` con formato `my
 
 1. Instalar dependencias: `npm install`
 2. Crear tablas: `npx prisma migrate dev` (genera la migración inicial si es la primera vez con MySQL)
-3. (Opcional) Crear admin de prueba: `npx prisma db seed`
+3. (Opcional) Seed de currículo de ejemplo: `npx prisma db seed`
 4. Servidor de desarrollo: `npm run dev`
 
 Abre [http://localhost:3000](http://localhost:3000) (o el puerto que indique Next.js).
@@ -24,10 +24,14 @@ Abre [http://localhost:3000](http://localhost:3000) (o el puerto que indique Nex
 - **OPENAI_API_KEY**: para usar **Nueva lección con IA** (admin → currículo → módulo → Nueva lección con IA) y **Generar ejercicios con IA** (en la gestión de ejercicios de una lección). Sin esta variable, esos botones devolverán un aviso para configurarla en `.env`.
 - **NEXT_PUBLIC_TURNSTILE_SITE_KEY** y **TURNSTILE_SECRET_KEY**: para activar Cloudflare Turnstile en el formulario de registro (anti-bots). Las claves se crean en el dashboard de Cloudflare (Turnstile, modo "Managed"). Si no se configuran, el registro funciona sin CAPTCHA (útil en desarrollo).
 
-## Usuario admin de prueba (tras `db seed`)
+## Primer administrador
 
-- **Email:** admin@qalab.dev  
-- **Contraseña:** admin123  
+El seed **no** crea usuarios admin (por seguridad, sin credenciales en código). Para tener un administrador:
+
+1. Regístrate como usuario normal en `/register`.
+2. En la base de datos, asigna el rol ADMIN a ese usuario. Con MySQL:  
+   `UPDATE user SET role = 'ADMIN' WHERE email = 'tu@email.com';`  
+   (o usa Prisma Studio / otro cliente SQL).
 
 Los nuevos registros son **alumnos**. Solo el admin puede entrar en `/admin` y ver el listado de alumnos y su progreso.
 

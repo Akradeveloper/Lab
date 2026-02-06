@@ -39,13 +39,13 @@ Opcional, para ejercicios de código: por defecto se usa el sandbox Piston públ
 npx prisma migrate dev
 ```
 
-5. (Opcional) Crea un usuario admin de prueba:
+5. (Opcional) Seed de currículo de ejemplo (módulo, lecciones, ejercicios):
 
 ```bash
 npx prisma db seed
 ```
 
-Esto crea el usuario **admin@qalab.dev** con contraseña **admin123**.
+El seed **no** crea usuarios admin. Para el primer administrador, ver más abajo.
 
 6. Arranca el servidor de desarrollo:
 
@@ -60,9 +60,13 @@ Abre en el navegador la URL que indique Next.js (por ejemplo `http://localhost:3
 - **Desde el panel admin**: en Admin → Base de datos puedes descargar un backup (archivo .db) y subir un archivo .db para restaurar.
 - **Desde terminal**: `npm run db:backup` crea un archivo en `backups/`. Para restaurar: `npm run db:restore -- backups/backup-YYYY-MM-DDTHH-mm-ss.db` (o sin argumento para usar el más reciente). Ver README en la raíz del proyecto.
 
-## Usuario admin por defecto (tras seed)
+## Primer administrador
 
-- **Email:** admin@qalab.dev  
-- **Contraseña:** admin123  
+El seed no crea usuarios admin (por seguridad). Para tener un administrador:
+
+1. Regístrate como usuario normal en `/register`.
+2. En la base de datos, asigna el rol ADMIN:  
+   `UPDATE user SET role = 'ADMIN' WHERE email = 'tu@email.com';`  
+   (o usa Prisma Studio u otro cliente SQL).
 
 Solo los usuarios con rol ADMIN pueden acceder a `/admin`. Los nuevos registros desde la app tienen rol ALUMNO.
