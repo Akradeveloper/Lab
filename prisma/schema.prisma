@@ -43,6 +43,7 @@ enum ExerciseType {
   MULTIPLE_CHOICE
   TRUE_FALSE
   CODE
+  DESARROLLO
 }
 
 enum DifficultyLevel {

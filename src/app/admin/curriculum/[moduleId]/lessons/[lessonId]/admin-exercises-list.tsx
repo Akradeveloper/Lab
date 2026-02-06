@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 type ExerciseItem = {
   id: string;
   lessonId: string;
-  type: "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CODE";
+  type: "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CODE" | "DESARROLLO";
   question: string;
   options: string;
   correctAnswer: string;
@@ -21,16 +21,25 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formType, setFormType] = useState<"MULTIPLE_CHOICE" | "TRUE_FALSE">(
-    "MULTIPLE_CHOICE"
-  );
+  const [formType, setFormType] = useState<
+    "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CODE" | "DESARROLLO"
+  >("MULTIPLE_CHOICE");
   const [formQuestion, setFormQuestion] = useState("");
   const [formOptions, setFormOptions] = useState<string[]>(["", ""]);
   const [formCorrectIndex, setFormCorrectIndex] = useState(0);
   const [formCorrectBool, setFormCorrectBool] = useState(true);
   const [formOrder, setFormOrder] = useState(0);
+  const [formCodeLanguage, setFormCodeLanguage] = useState<
+    "python" | "javascript" | "java" | "typescript"
+  >("javascript");
+  const [formCodeTemplate, setFormCodeTemplate] = useState("");
+  const [formCodeSolution, setFormCodeSolution] = useState("");
   const [saving, setSaving] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
+  const [generateTypes, setGenerateTypes] = useState<string[]>([]);
+  const [generateCodeLanguage, setGenerateCodeLanguage] = useState<
+    "python" | "javascript" | "java" | "typescript"
+  >("javascript");
   const [suggestionsEx, setSuggestionsEx] = useState<
     Array<{ type: string; description: string }>
   >([]);
@@ -53,6 +62,13 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
     loadExercises();
   }, [lessonId]);
 
+  const CODE_LANGUAGES = [
+    { value: "python", label: "Python" },
+    { value: "javascript", label: "JavaScript" },
+    { value: "java", label: "Java" },
+    { value: "typescript", label: "TypeScript" },
+  ] as const;
+
   function openCreate() {
     setEditingId(null);
     setFormType("MULTIPLE_CHOICE");
@@ -61,35 +77,56 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
     setFormCorrectIndex(0);
     setFormCorrectBool(true);
     setFormOrder(exercises.length);
+    setFormCodeLanguage("javascript");
+    setFormCodeTemplate("");
+    setFormCodeSolution("");
     setShowForm(true);
   }
 
   function openEdit(e: ExerciseItem) {
-    if (e.type === "CODE") {
-      alert(
-        "La edición de ejercicios de código estará disponible próximamente."
-      );
-      return;
-    }
     setEditingId(e.id);
-    setFormType(e.type);
+    setFormType(
+      e.type === "DESARROLLO" ? "DESARROLLO" : e.type === "CODE" ? "CODE" : e.type
+    );
     setFormQuestion(e.question);
-    try {
-      const opts = JSON.parse(e.options) as string[];
-      setFormOptions(Array.isArray(opts) && opts.length > 0 ? opts : ["", ""]);
-    } catch {
-      setFormOptions(["", ""]);
-    }
-    try {
-      const correct = JSON.parse(e.correctAnswer);
-      if (e.type === "TRUE_FALSE") {
-        setFormCorrectBool(correct === true);
-      } else {
-        setFormCorrectIndex(typeof correct === "number" ? correct : 0);
+    if (e.type === "CODE") {
+      try {
+        const opts = JSON.parse(e.options) as {
+          language?: string;
+          template?: string;
+          testCases?: unknown[];
+        };
+        const lang = opts?.language;
+        setFormCodeLanguage(
+          CODE_LANGUAGES.some((l) => l.value === lang)
+            ? (lang as "python" | "javascript" | "java" | "typescript")
+            : "javascript"
+        );
+        setFormCodeTemplate(typeof opts?.template === "string" ? opts.template : "");
+        setFormCodeSolution(typeof e.correctAnswer === "string" ? e.correctAnswer : "");
+      } catch {
+        setFormCodeLanguage("javascript");
+        setFormCodeTemplate("");
+        setFormCodeSolution("");
       }
-    } catch {
-      setFormCorrectIndex(0);
-      setFormCorrectBool(true);
+    } else if (e.type !== "DESARROLLO") {
+      try {
+        const opts = JSON.parse(e.options) as string[];
+        setFormOptions(Array.isArray(opts) && opts.length > 0 ? opts : ["", ""]);
+      } catch {
+        setFormOptions(["", ""]);
+      }
+      try {
+        const correct = JSON.parse(e.correctAnswer);
+        if (e.type === "TRUE_FALSE") {
+          setFormCorrectBool(correct === true);
+        } else {
+          setFormCorrectIndex(typeof correct === "number" ? correct : 0);
+        }
+      } catch {
+        setFormCorrectIndex(0);
+        setFormCorrectBool(true);
+      }
     }
     setFormOrder(e.order);
     setShowForm(true);
@@ -122,19 +159,36 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    const options =
-      formType === "TRUE_FALSE"
-        ? ["Verdadero", "Falso"]
-        : formOptions.filter((o) => o.trim());
-    const correctAnswer =
-      formType === "TRUE_FALSE" ? formCorrectBool : formCorrectIndex;
-    const body = {
-      type: formType,
-      question: formQuestion.trim(),
-      options,
-      correctAnswer,
-      order: formOrder,
-    };
+    const body =
+      formType === "DESARROLLO"
+        ? {
+            type: "DESARROLLO" as const,
+            question: formQuestion.trim(),
+            order: formOrder,
+          }
+        : formType === "CODE"
+          ? {
+              type: "CODE" as const,
+              question: formQuestion.trim(),
+              order: formOrder,
+              options: {
+                language: formCodeLanguage,
+                template: formCodeTemplate,
+                testCases: [] as Array<{ input: string; expectedOutput: string }>,
+              },
+              correctAnswer: formCodeSolution,
+            }
+          : {
+              type: formType,
+              question: formQuestion.trim(),
+              options:
+                formType === "TRUE_FALSE"
+                  ? ["Verdadero", "Falso"]
+                  : formOptions.filter((o) => o.trim()),
+              correctAnswer:
+                formType === "TRUE_FALSE" ? formCorrectBool : formCorrectIndex,
+              order: formOrder,
+            };
     const url = editingId
       ? `/api/admin/exercises/${editingId}`
       : `/api/admin/lessons/${lessonId}/exercises`;
@@ -156,13 +210,30 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
       .finally(() => setSaving(false));
   }
 
+  function toggleGenerateType(value: string) {
+    setGenerateTypes((prev) =>
+      prev.includes(value) ? prev.filter((t) => t !== value) : [...prev, value]
+    );
+  }
+
+  const GENERATE_CODE_LANGUAGES = [
+    { value: "python", label: "Python" },
+    { value: "javascript", label: "JavaScript" },
+    { value: "java", label: "Java" },
+    { value: "typescript", label: "TypeScript" },
+  ] as const;
+
   function handleGenerateWithAI() {
     setError("");
     setGeneratingAI(true);
+    const body: Record<string, unknown> = { types: generateTypes };
+    if (generateTypes.includes("CODE")) {
+      body.codeLanguage = generateCodeLanguage;
+    }
     fetch(`/api/admin/lessons/${lessonId}/generate-exercises`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+      body: JSON.stringify(body),
     })
       .then((res) => {
         if (!res.ok) return res.json().then((d) => Promise.reject(d));
@@ -225,30 +296,94 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
           {error}
         </p>
       )}
-      <div className="flex flex-wrap justify-end gap-2">
-        <button
-          type="button"
-          onClick={fetchExerciseSuggestions}
-          disabled={loadingSuggestionsEx}
-          className="rounded border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
-        >
-          {loadingSuggestionsEx ? "Cargando…" : "Sugerencia"}
-        </button>
-        <button
-          type="button"
-          onClick={handleGenerateWithAI}
-          disabled={generatingAI}
-          className="rounded border border-accent bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
-        >
-          {generatingAI ? "Generando…" : "Generar ejercicios con IA"}
-        </button>
-        <button
-          type="button"
-          onClick={openCreate}
-          className="rounded border border-accent bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        >
-          Nuevo ejercicio
-        </button>
+      <div className="space-y-3">
+        <div className="rounded border border-border bg-surface/50 px-3 py-2">
+          <p className="mb-2 text-sm font-medium text-foreground">
+            Tipos de ejercicios a generar
+          </p>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={generateTypes.includes("MULTIPLE_CHOICE")}
+                onChange={() => toggleGenerateType("MULTIPLE_CHOICE")}
+                className="rounded border-border text-accent focus:ring-accent"
+              />
+              <span className="text-sm text-foreground">Opción múltiple</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={generateTypes.includes("TRUE_FALSE")}
+                onChange={() => toggleGenerateType("TRUE_FALSE")}
+                className="rounded border-border text-accent focus:ring-accent"
+              />
+              <span className="text-sm text-foreground">
+                Verdadero / Falso
+              </span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={generateTypes.includes("CODE")}
+                onChange={() => toggleGenerateType("CODE")}
+                className="rounded border-border text-accent focus:ring-accent"
+              />
+              <span className="text-sm text-foreground">Código</span>
+            </label>
+          </div>
+          {generateTypes.includes("CODE") && (
+            <div className="mt-2">
+              <span className="text-sm font-medium text-foreground">
+                Lenguaje para ejercicios de código
+              </span>
+              <select
+                value={generateCodeLanguage}
+                onChange={(e) =>
+                  setGenerateCodeLanguage(
+                    e.target.value as
+                      | "python"
+                      | "javascript"
+                      | "java"
+                      | "typescript"
+                  )
+                }
+                className="mt-1 block rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+              >
+                {GENERATE_CODE_LANGUAGES.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            onClick={fetchExerciseSuggestions}
+            disabled={loadingSuggestionsEx}
+            className="rounded border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+          >
+            {loadingSuggestionsEx ? "Cargando…" : "Sugerencia"}
+          </button>
+          <button
+            type="button"
+            onClick={handleGenerateWithAI}
+            disabled={generatingAI || generateTypes.length === 0}
+            className="rounded border border-accent bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50"
+          >
+            {generatingAI ? "Generando…" : "Generar ejercicios con IA"}
+          </button>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="rounded border border-accent bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            Nuevo ejercicio
+          </button>
+        </div>
       </div>
       {suggestionsEx.length > 0 && (
         <div className="rounded-lg border border-border bg-surface p-4">
@@ -288,13 +423,19 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
                 value={formType}
                 onChange={(e) =>
                   setFormType(
-                    e.target.value as "MULTIPLE_CHOICE" | "TRUE_FALSE"
+                    e.target.value as
+                      | "MULTIPLE_CHOICE"
+                      | "TRUE_FALSE"
+                      | "CODE"
+                      | "DESARROLLO"
                   )
                 }
                 className="mt-1 w-full max-w-[200px] rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
               >
                 <option value="MULTIPLE_CHOICE">Opción múltiple</option>
                 <option value="TRUE_FALSE">Verdadero / Falso</option>
+                <option value="CODE">Código</option>
+                <option value="DESARROLLO">Desarrollo</option>
               </select>
             </label>
             <label className="block">
@@ -309,6 +450,71 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
                 className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
               />
             </label>
+            {formType === "DESARROLLO" && (
+              <p className="rounded border border-border bg-surface px-3 py-2 text-sm text-muted">
+                Los ejemplos de ejercicios de desarrollo se crearán en otro
+                momento. Por ahora solo se guarda el enunciado y el orden.
+              </p>
+            )}
+            {formType === "CODE" && (
+              <>
+                <p className="text-sm text-muted">
+                  El enunciado debe describir la tarea (completar desarrollo,
+                  arreglar errores, etc.). La solución es el código exacto con
+                  el que se comparará la respuesta del alumno.
+                </p>
+                <label className="block">
+                  <span className="text-sm font-medium text-foreground">
+                    Lenguaje
+                  </span>
+                  <select
+                    value={formCodeLanguage}
+                    onChange={(e) =>
+                      setFormCodeLanguage(
+                        e.target.value as
+                          | "python"
+                          | "javascript"
+                          | "java"
+                          | "typescript"
+                      )
+                    }
+                    className="mt-1 w-full max-w-[200px] rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                  >
+                    {CODE_LANGUAGES.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-foreground">
+                    Código inicial (plantilla)
+                  </span>
+                  <textarea
+                    value={formCodeTemplate}
+                    onChange={(e) => setFormCodeTemplate(e.target.value)}
+                    spellCheck={false}
+                    rows={8}
+                    className="mt-1 w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                    placeholder="Código que verá el alumno para completar o corregir"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-foreground">
+                    Solución (código correcto)
+                  </span>
+                  <textarea
+                    value={formCodeSolution}
+                    onChange={(e) => setFormCodeSolution(e.target.value)}
+                    spellCheck={false}
+                    rows={8}
+                    className="mt-1 w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                    placeholder="Código exacto con el que se comparará la respuesta"
+                  />
+                </label>
+              </>
+            )}
             {formType === "MULTIPLE_CHOICE" && (
               <>
                 <div>
@@ -436,9 +642,11 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
                 Tipo:{" "}
                 {ex.type === "CODE"
                   ? "Código"
-                  : ex.type === "TRUE_FALSE"
-                  ? "Verdadero/Falso"
-                  : "Opción múltiple"}
+                  : ex.type === "DESARROLLO"
+                    ? "Desarrollo"
+                    : ex.type === "TRUE_FALSE"
+                      ? "Verdadero/Falso"
+                      : "Opción múltiple"}
                 {" · "}Orden: {ex.order}
               </p>
               <div className="mt-3 flex gap-2">

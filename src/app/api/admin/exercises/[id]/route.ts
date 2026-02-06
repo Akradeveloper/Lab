@@ -24,7 +24,7 @@ export async function PUT(request: Request, { params }: Params) {
     const { type, question, options, correctAnswer, order } = body;
 
     const data: {
-      type?: "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CODE";
+      type?: "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CODE" | "DESARROLLO";
       question?: string;
       options?: string;
       correctAnswer?: string;
@@ -32,7 +32,7 @@ export async function PUT(request: Request, { params }: Params) {
     } = {};
 
     if (type !== undefined) {
-      if (!["MULTIPLE_CHOICE", "TRUE_FALSE", "CODE"].includes(type)) {
+      if (!["MULTIPLE_CHOICE", "TRUE_FALSE", "CODE", "DESARROLLO"].includes(type)) {
         return NextResponse.json(
           { error: "Tipo de ejercicio inválido" },
           { status: 400 }
@@ -63,6 +63,9 @@ export async function PUT(request: Request, { params }: Params) {
     if (correctAnswer !== undefined) {
       const exType = type ?? body.type;
       if (exType === "CODE") {
+        data.correctAnswer =
+          typeof correctAnswer === "string" ? correctAnswer : "";
+      } else if (exType === "DESARROLLO") {
         data.correctAnswer = "";
       } else if (exType === "TRUE_FALSE") {
         data.correctAnswer =

@@ -56,8 +56,13 @@ export function AdminLessonsList({
   const [formDifficulty, setFormDifficulty] = useState("");
   const [saving, setSaving] = useState(false);
   const [showAIGenerate, setShowAIGenerate] = useState(false);
+  const [aiDifficulty, setAiDifficulty] = useState("");
   const [aiTopic, setAiTopic] = useState("");
   const [aiAlsoExercises, setAiAlsoExercises] = useState(false);
+  const [aiExerciseTypes, setAiExerciseTypes] = useState<string[]>([]);
+  const [aiCodeLanguage, setAiCodeLanguage] = useState<
+    "python" | "javascript" | "java" | "typescript"
+  >("javascript");
   const [aiGenerating, setAiGenerating] = useState(false);
   const [suggestionsLesson, setSuggestionsLesson] = useState<string[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
@@ -112,9 +117,27 @@ export function AdminLessonsList({
 
   function closeAIGenerate() {
     setShowAIGenerate(false);
+    setAiDifficulty("");
     setAiTopic("");
     setAiAlsoExercises(false);
+    setAiExerciseTypes([]);
+    setAiCodeLanguage("javascript");
     setSuggestionsLesson([]);
+  }
+
+  const AI_CODE_LANGUAGES = [
+    { value: "python", label: "Python" },
+    { value: "javascript", label: "JavaScript" },
+    { value: "java", label: "Java" },
+    { value: "typescript", label: "TypeScript" },
+  ] as const;
+
+  function toggleAiExerciseType(value: string) {
+    setAiExerciseTypes((prev) =>
+      prev.includes(value)
+        ? prev.filter((t) => t !== value)
+        : [...prev, value]
+    );
   }
 
   function fetchLessonSuggestions() {
@@ -147,10 +170,17 @@ export function AdminLessonsList({
     const generateUrl = flatMode(submoduleId)
       ? `/api/admin/modules/${moduleId}/generate-lesson`
       : `/api/admin/submodules/${submoduleId}/generate-lesson`;
+    const lessonBody: Record<string, unknown> = {
+      topic,
+      difficulty: aiDifficulty.trim() || undefined,
+    };
+    if (aiAlsoExercises && aiExerciseTypes.includes("CODE")) {
+      lessonBody.language = aiCodeLanguage;
+    }
     fetch(generateUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic }),
+      body: JSON.stringify(lessonBody),
     })
       .then((res) => {
         if (!res.ok) return res.json().then((d) => Promise.reject(d));
@@ -158,10 +188,16 @@ export function AdminLessonsList({
       })
       .then((lesson: { id: string }) => {
         if (aiAlsoExercises) {
+          const exercisesBody: Record<string, unknown> = {
+            types: aiExerciseTypes,
+          };
+          if (aiExerciseTypes.includes("CODE")) {
+            exercisesBody.codeLanguage = aiCodeLanguage;
+          }
           return fetch(`/api/admin/lessons/${lesson.id}/generate-exercises`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({}),
+            body: JSON.stringify(exercisesBody),
           }).then((r) => {
             if (!r.ok) return r.json().then((d) => Promise.reject(d));
             return lesson;
@@ -368,6 +404,22 @@ export function AdminLessonsList({
           <div className="space-y-3">
             <label className="block">
               <span className="text-sm font-medium text-foreground">
+                Dificultad
+              </span>
+              <select
+                value={aiDifficulty}
+                onChange={(e) => setAiDifficulty(e.target.value)}
+                className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+              >
+                {DIFFICULTY_OPTIONS.map((opt) => (
+                  <option key={opt.value || "empty"} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-sm font-medium text-foreground">
                 Tema o título de la lección
               </span>
               <input
@@ -390,6 +442,72 @@ export function AdminLessonsList({
                 Generar también ejercicios con IA
               </span>
             </label>
+            {aiAlsoExercises && (
+              <div className="rounded border border-border bg-surface/50 px-3 py-2">
+                <p className="mb-2 text-sm font-medium text-foreground">
+                  Tipos de ejercicios a generar
+                </p>
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={aiExerciseTypes.includes("MULTIPLE_CHOICE")}
+                      onChange={() => toggleAiExerciseType("MULTIPLE_CHOICE")}
+                      className="rounded border-border text-accent focus:ring-accent"
+                    />
+                    <span className="text-sm text-foreground">
+                      Opción múltiple
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={aiExerciseTypes.includes("TRUE_FALSE")}
+                      onChange={() => toggleAiExerciseType("TRUE_FALSE")}
+                      className="rounded border-border text-accent focus:ring-accent"
+                    />
+                    <span className="text-sm text-foreground">
+                      Verdadero / Falso
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={aiExerciseTypes.includes("CODE")}
+                      onChange={() => toggleAiExerciseType("CODE")}
+                      className="rounded border-border text-accent focus:ring-accent"
+                    />
+                    <span className="text-sm text-foreground">Código</span>
+                  </label>
+                </div>
+                {aiExerciseTypes.includes("CODE") && (
+                  <div className="mt-2">
+                    <span className="text-sm font-medium text-foreground">
+                      Lenguaje para teoría, ejemplos y ejercicios de código
+                    </span>
+                    <select
+                      value={aiCodeLanguage}
+                      onChange={(e) =>
+                        setAiCodeLanguage(
+                          e.target.value as
+                            | "python"
+                            | "javascript"
+                            | "java"
+                            | "typescript"
+                        )
+                      }
+                      className="mt-1 block rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                    >
+                      {AI_CODE_LANGUAGES.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -417,7 +535,11 @@ export function AdminLessonsList({
           <div className="mt-4 flex gap-2">
             <button
               type="submit"
-              disabled={aiGenerating || !aiTopic.trim()}
+              disabled={
+                aiGenerating ||
+                !aiTopic.trim() ||
+                (aiAlsoExercises && aiExerciseTypes.length === 0)
+              }
               className="rounded bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {aiGenerating ? "Generando…" : "Generar"}
