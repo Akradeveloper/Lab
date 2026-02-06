@@ -6,7 +6,10 @@ import { DescriptionMarkdown } from "@/components/description-markdown";
 import { Header } from "@/components/Header";
 import { prisma } from "@/lib/prisma";
 
-type Props = { params: Promise<{ moduleId: string }> };
+type Props = {
+  params: Promise<{ moduleId: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
 export async function generateMetadata({ params }: Props) {
   const { moduleId } = await params;
@@ -19,11 +22,13 @@ export async function generateMetadata({ params }: Props) {
   };
 }
 
-export default async function ModuloPage({ params }: Props) {
+export default async function ModuloPage({ params, searchParams }: Props) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
   const { moduleId } = await params;
+  const sp = await searchParams;
+  const showBloqueado = sp?.bloqueado === "1";
   const module_ = await prisma.module.findUnique({
     where: { id: moduleId },
     include: {
@@ -53,6 +58,7 @@ export default async function ModuloPage({ params }: Props) {
   const completedLessonIds = new Set(progress.map((p) => p.lessonId));
   let totalCount = 0;
   let completedCount = 0;
+  const isAdmin = session.user.role === "ADMIN";
 
   const hasSubmodules = module_.submodules.length > 0;
 
@@ -76,6 +82,12 @@ export default async function ModuloPage({ params }: Props) {
             content={module_.description}
             className="mb-4"
           />
+        )}
+
+        {showBloqueado && (
+          <p className="mb-4 rounded border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+            Debes completar las lecciones anteriores para acceder a la siguiente.
+          </p>
         )}
 
         {hasSubmodules ? (
@@ -134,30 +146,51 @@ export default async function ModuloPage({ params }: Props) {
               <ol className="space-y-2">
                 {module_.lessons.map((lesson, index) => {
                   const completed = completedLessonIds.has(lesson.id);
+                  const orderedIds = module_.lessons.map((l) => l.id);
+                  const previousIds = orderedIds.slice(0, index);
+                  const unlocked =
+                    isAdmin ||
+                    previousIds.every((id) => completedLessonIds.has(id));
                   return (
                     <li key={lesson.id}>
-                      <Link
-                        href={`/modulos/${moduleId}/lecciones/${lesson.id}`}
-                        className="flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 transition-colors hover:border-accent/50 hover:bg-surface/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                      >
-                        <span
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-medium ${
-                            completed
-                              ? "bg-accent/20 text-accent"
-                              : "bg-surface border border-border text-muted"
-                          }`}
+                      {unlocked ? (
+                        <Link
+                          href={`/modulos/${moduleId}/lecciones/${lesson.id}`}
+                          className="flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 transition-colors hover:border-accent/50 hover:bg-surface/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                         >
-                          {completed ? "✓" : index + 1}
-                        </span>
-                        <span className="font-medium text-foreground">
-                          {lesson.title}
-                        </span>
-                        {completed && (
-                          <span className="ml-auto text-sm text-accent">
-                            Completada
+                          <span
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-medium ${
+                              completed
+                                ? "bg-accent/20 text-accent"
+                                : "bg-surface border border-border text-muted"
+                            }`}
+                          >
+                            {completed ? "✓" : index + 1}
                           </span>
-                        )}
-                      </Link>
+                          <span className="font-medium text-foreground">
+                            {lesson.title}
+                          </span>
+                          {completed && (
+                            <span className="ml-auto text-sm text-accent">
+                              Completada
+                            </span>
+                          )}
+                        </Link>
+                      ) : (
+                        <div
+                          className="flex cursor-not-allowed items-center gap-3 rounded-lg border border-border bg-surface/60 px-4 py-3 text-muted"
+                          aria-disabled="true"
+                          title="Completa la lección anterior"
+                        >
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface text-sm font-medium">
+                            {index + 1}
+                          </span>
+                          <span className="font-medium">{lesson.title}</span>
+                          <span className="ml-auto text-sm">
+                            Completa la lección anterior
+                          </span>
+                        </div>
+                      )}
                     </li>
                   );
                 })}

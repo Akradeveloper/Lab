@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { Header } from "@/components/Header";
+import { getPreviousLessonIdsInModule } from "@/lib/lesson-order";
 import { prisma } from "@/lib/prisma";
 import { LessonContent } from "@/components/lesson-content";
 import { LessonExercises } from "@/components/lesson-exercises";
@@ -52,6 +53,22 @@ export default async function LessonPage({ params }: Props) {
   }
 
   if (lesson.moduleId !== moduleId) notFound();
+
+  // Solo exigir lecciones anteriores completadas a alumnos, no a admin
+  if (session.user.role !== "ADMIN") {
+    const previousIds = await getPreviousLessonIdsInModule(moduleId, lessonId);
+    if (previousIds.length > 0) {
+      const progress = await prisma.progress.findMany({
+        where: { userId: session.user!.id, courseId: moduleId },
+        select: { lessonId: true },
+      });
+      const completedSet = new Set(progress.map((p) => p.lessonId));
+      const allPreviousDone = previousIds.every((id) => completedSet.has(id));
+      if (!allPreviousDone) {
+        redirect(`/modulos/${moduleId}?bloqueado=1`);
+      }
+    }
+  }
 
   const exercisesForClient = lesson.exercises.map((e) => {
     if (e.type === "DESARROLLO") {
