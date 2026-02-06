@@ -39,7 +39,24 @@ export async function POST(request: Request, { params }: Params) {
     let allCorrect = true;
 
     for (const ex of exercises) {
-      if (ex.type === "CODE") continue;
+      if (ex.type === "DESARROLLO") continue;
+
+      if (ex.type === "CODE") {
+        const userCode =
+          typeof answers[ex.id] === "string"
+            ? answers[ex.id]
+            : answers[ex.id] != null
+              ? String(answers[ex.id])
+              : "";
+        const solution = typeof ex.correctAnswer === "string" ? ex.correctAnswer : "";
+        const correct =
+          solution.trim() !== "" &&
+          normalizeCode(String(userCode)) === normalizeCode(String(solution));
+        results.push({ exerciseId: ex.id, correct });
+        if (!correct) allCorrect = false;
+        continue;
+      }
+
       const userAnswer = answers[ex.id];
       const correct = isAnswerCorrect(ex, userAnswer);
       results.push({ exerciseId: ex.id, correct });
@@ -78,6 +95,13 @@ export async function POST(request: Request, { params }: Params) {
       { status: 500 }
     );
   }
+}
+
+function normalizeCode(s: string): string {
+  return String(s ?? "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .trim();
 }
 
 function isAnswerCorrect(

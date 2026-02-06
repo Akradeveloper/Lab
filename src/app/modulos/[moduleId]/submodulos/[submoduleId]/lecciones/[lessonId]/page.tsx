@@ -62,18 +62,30 @@ export default async function LessonPage({ params }: Props) {
   )
     notFound();
 
-  const exercisesForClient = lesson.exercises
-    .filter(
-      (e): e is typeof e & { type: "MULTIPLE_CHOICE" | "TRUE_FALSE" } =>
-        e.type === "MULTIPLE_CHOICE" || e.type === "TRUE_FALSE"
-    )
-    .map((e) => ({
+  const exercisesForClient = lesson.exercises.map((e) => {
+    if (e.type === "DESARROLLO") {
+      return { id: e.id, type: "DESARROLLO" as const, question: e.question, options: [] as string[], order: e.order };
+    }
+    if (e.type === "CODE") {
+      const codeOpts = parseCodeOptions(e.options);
+      return {
+        id: e.id,
+        type: "CODE" as const,
+        question: e.question,
+        language: codeOpts.language,
+        template: codeOpts.template,
+        testCases: codeOpts.testCases,
+        order: e.order,
+      };
+    }
+    return {
       id: e.id,
       type: e.type,
       question: e.question,
       options: parseOptions(e.options),
       order: e.order,
-    }));
+    };
+  });
 
   // Siguiente: misma submódulo, siguiente por order; si no hay, primera lección del siguiente submódulo
   let nextLesson: {
@@ -199,5 +211,25 @@ function parseOptions(options: string): string[] {
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
+  }
+}
+
+function parseCodeOptions(options: string): {
+  language: string;
+  template: string;
+  testCases: Array<{ input: string; expectedOutput: string }>;
+} {
+  try {
+    const parsed = JSON.parse(options) as Record<string, unknown>;
+    const language = typeof parsed?.language === "string" ? parsed.language : "javascript";
+    const template = typeof parsed?.template === "string" ? parsed.template : "";
+    const testCases = Array.isArray(parsed?.testCases)
+      ? (parsed.testCases as Array<{ input?: string; expectedOutput?: string }>).filter(
+          (tc) => tc && typeof tc.input === "string" && typeof tc.expectedOutput === "string"
+        ).map((tc) => ({ input: tc.input!, expectedOutput: tc.expectedOutput! }))
+      : [];
+    return { language, template, testCases };
+  } catch {
+    return { language: "javascript", template: "", testCases: [] };
   }
 }
