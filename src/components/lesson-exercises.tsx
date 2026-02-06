@@ -3,13 +3,23 @@
 import { useState } from "react";
 import Link from "next/link";
 
-type Exercise = {
-  id: string;
-  type: "MULTIPLE_CHOICE" | "TRUE_FALSE";
-  question: string;
-  options: string[];
-  order: number;
-};
+type Exercise =
+  | {
+      id: string;
+      type: "MULTIPLE_CHOICE" | "TRUE_FALSE" | "DESARROLLO";
+      question: string;
+      options: string[];
+      order: number;
+    }
+  | {
+      id: string;
+      type: "CODE";
+      question: string;
+      language: string;
+      template: string;
+      testCases: Array<{ input: string; expectedOutput: string }>;
+      order: number;
+    };
 
 type LessonNav = {
   id: string;
@@ -64,11 +74,17 @@ export function LessonExercises({
     }
     setChecking(true);
     setCheckResult(null);
+    const bodyAnswers = { ...answers };
+    for (const e of exercises) {
+      if (e.type === "CODE" && bodyAnswers[e.id] === undefined && e.template.trim() !== "") {
+        bodyAnswers[e.id] = e.template;
+      }
+    }
     try {
       const res = await fetch(`/api/curriculum/lessons/${lessonId}/check`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers }),
+        body: JSON.stringify({ answers: bodyAnswers }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Error al comprobar");
@@ -107,7 +123,17 @@ export function LessonExercises({
 
   const canCheck =
     exercises.length === 0 ||
-    exercises.every((e) => answers[e.id] !== undefined && answers[e.id] !== "");
+    exercises.every((e) => {
+      if (e.type === "DESARROLLO") return true;
+      if (e.type === "CODE") {
+        const code =
+          answers[e.id] !== undefined
+            ? String(answers[e.id]).trim()
+            : e.template.trim();
+        return code !== "";
+      }
+      return answers[e.id] !== undefined && answers[e.id] !== "";
+    });
 
   if (exercises.length === 0) {
     return (
@@ -195,6 +221,30 @@ export function LessonExercises({
           }`}
         >
           <p className="mb-3 font-medium text-foreground">{ex.question}</p>
+          {ex.type === "DESARROLLO" && (
+            <p className="text-sm text-muted">
+              Ejercicio de desarrollo (próximamente). Este ejercicio se
+              evaluará en una futura versión.
+            </p>
+          )}
+          {ex.type === "CODE" && (
+            <div className="mt-2">
+              <label className="block text-sm text-muted mb-1">
+                Edita el código (puedes hacer pocos cambios para que pase los tests):
+              </label>
+              <textarea
+                value={
+                  answers[ex.id] !== undefined
+                    ? String(answers[ex.id])
+                    : ex.template
+                }
+                onChange={(e) => setAnswer(ex.id, e.target.value)}
+                spellCheck={false}
+                rows={12}
+                className="mt-1 w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+              />
+            </div>
+          )}
           <div className="space-y-2">
             {ex.type === "TRUE_FALSE" && (
               <>

@@ -22,6 +22,7 @@ Abre [http://localhost:3000](http://localhost:3000) (o el puerto que indique Nex
 ### Variables de entorno opcionales
 
 - **OPENAI_API_KEY**: para usar **Nueva lección con IA** (admin → currículo → módulo → Nueva lección con IA) y **Generar ejercicios con IA** (en la gestión de ejercicios de una lección). Sin esta variable, esos botones devolverán un aviso para configurarla en `.env`.
+- **NEXT_PUBLIC_TURNSTILE_SITE_KEY** y **TURNSTILE_SECRET_KEY**: para activar Cloudflare Turnstile en el formulario de registro (anti-bots). Las claves se crean en el dashboard de Cloudflare (Turnstile, modo "Managed"). Si no se configuran, el registro funciona sin CAPTCHA (útil en desarrollo).
 
 ## Usuario admin de prueba (tras `db seed`)
 

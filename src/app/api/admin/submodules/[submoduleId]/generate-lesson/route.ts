@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import type { DifficultyLevel } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -8,6 +9,18 @@ type Params = { params: Promise<{ submoduleId: string }> };
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const MAX_PREV_CONTENT_LENGTH = 280;
+const VALID_DIFFICULTY = ["APRENDIZ", "JUNIOR", "MID", "SENIOR", "ESPECIALISTA"] as const;
+
+function difficultyPromptFragment(difficulty: string): string {
+  const desc: Record<string, string> = {
+    APRENDIZ: "introductorio: sin asumir experiencia previa, conceptos muy básicos.",
+    JUNIOR: "nivel junior: conceptos básicos aplicados, ejemplos sencillos.",
+    MID: "nivel intermedio: asume conocimientos previos, mayor profundidad.",
+    SENIOR: "nivel senior: contenido avanzado, mejores prácticas y casos reales.",
+    ESPECIALISTA: "nivel especialista: experto, temas complejos y optimización.",
+  };
+  return `Nivel de la lección: ${difficulty}. ${desc[difficulty] ?? "Adapta el contenido a este nivel."} El contenido debe ajustarse a esta profundidad.`;
+}
 
 export async function POST(request: Request, { params }: Params) {
   const session = await getServerSession(authOptions);
@@ -43,6 +56,18 @@ export async function POST(request: Request, { params }: Params) {
         { status: 400 }
       );
     }
+    const difficultyValue =
+      body?.difficulty != null &&
+      typeof body.difficulty === "string" &&
+      VALID_DIFFICULTY.includes(body.difficulty as (typeof VALID_DIFFICULTY)[number])
+        ? (body.difficulty as DifficultyLevel)
+        : undefined;
+
+    const VALID_LANGUAGES = ["python", "javascript", "java", "typescript"] as const;
+    const language =
+      typeof body?.language === "string" && VALID_LANGUAGES.includes(body.language as (typeof VALID_LANGUAGES)[number])
+        ? body.language
+        : undefined;
 
     const submodule = await prisma.submodule.findUnique({
       where: { id: submoduleId },
@@ -82,7 +107,15 @@ Estructura obligatoria del contenido en Markdown:
 Responde ÚNICAMENTE con un JSON válido, sin markdown ni texto extra:
 {"title": "Título de la lección", "content": "Contenido en Markdown siguiendo la estructura anterior"}`;
 
-    const userPrompt = `Módulo: "${submodule.module.title}".
+    const difficultyInstruction = difficultyValue
+      ? difficultyPromptFragment(difficultyValue) + "\n\n"
+      : "";
+
+    const languageInstruction = language
+      ? `Todos los ejemplos de código y la teoría deben usar únicamente el lenguaje ${language}. Los bloques de código en el contenido deben estar en ${language}. Mantén el resto del texto en español.\n\n`
+      : "";
+
+    const userPrompt = `${difficultyInstruction}${languageInstruction}Módulo: "${submodule.module.title}".
 Submódulo: "${submodule.title}".
 ${submodule.description ? `Descripción del submódulo: ${submodule.description}\n` : ""}
 ${submodule.module.description ? `Descripción del módulo: ${submodule.module.description}\n` : ""}
@@ -136,6 +169,7 @@ Si el tema es orientado a código (p. ej. Jest, Selenium, scripts, APIs), la sec
         title,
         content,
         order: nextOrder,
+        ...(difficultyValue && { difficulty: difficultyValue }),
       },
     });
 

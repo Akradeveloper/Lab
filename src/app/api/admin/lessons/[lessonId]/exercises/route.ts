@@ -56,9 +56,9 @@ export async function POST(request: Request, { params }: Params) {
     const body = await request.json();
     const { type, question, options, correctAnswer, order } = body;
 
-    if (!type || !["MULTIPLE_CHOICE", "TRUE_FALSE", "CODE"].includes(type)) {
+    if (!type || !["MULTIPLE_CHOICE", "TRUE_FALSE", "CODE", "DESARROLLO"].includes(type)) {
       return NextResponse.json(
-        { error: "Tipo de ejercicio inválido (MULTIPLE_CHOICE, TRUE_FALSE o CODE)" },
+        { error: "Tipo de ejercicio inválido (MULTIPLE_CHOICE, TRUE_FALSE, CODE o DESARROLLO)" },
         { status: 400 }
       );
     }
@@ -80,6 +80,10 @@ export async function POST(request: Request, { params }: Params) {
         template: typeof codeOpts.template === "string" ? codeOpts.template : "",
         testCases: Array.isArray(codeOpts.testCases) ? codeOpts.testCases : [],
       });
+      correctStr =
+        typeof correctAnswer === "string" ? correctAnswer : "";
+    } else if (type === "DESARROLLO") {
+      optionsStr = "{}";
       correctStr = "";
     } else {
       optionsStr =
@@ -103,7 +107,7 @@ export async function POST(request: Request, { params }: Params) {
     const exercise = await prisma.exercise.create({
       data: {
         lessonId,
-        type: type as "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CODE",
+        type: type as "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CODE" | "DESARROLLO",
         question: question.trim(),
         options: optionsStr,
         correctAnswer: correctStr,
