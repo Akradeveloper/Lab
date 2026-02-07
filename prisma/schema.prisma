@@ -57,7 +57,7 @@ enum DifficultyLevel {
 model Module {
   id          String      @id @default(cuid())
   title       String
-  description String?
+  description String?     @db.Text
   order       Int         @default(0)
   createdAt   DateTime    @default(now())
   submodules  Submodule[]
@@ -70,7 +70,7 @@ model Submodule {
   id          String   @id @default(cuid())
   moduleId    String
   title       String
-  description String?
+  description String?  @db.Text
   order       Int      @default(0)
   createdAt   DateTime @default(now())
   module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)

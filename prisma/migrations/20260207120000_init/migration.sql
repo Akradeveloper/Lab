@@ -26,7 +26,7 @@ CREATE TABLE `progress` (
 CREATE TABLE `module` (
     `id` VARCHAR(191) NOT NULL,
     `title` VARCHAR(191) NOT NULL,
-    `description` VARCHAR(191) NULL,
+    `description` TEXT NULL,
     `order` INTEGER NOT NULL DEFAULT 0,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
@@ -38,7 +38,7 @@ CREATE TABLE `submodule` (
     `id` VARCHAR(191) NOT NULL,
     `moduleId` VARCHAR(191) NOT NULL,
     `title` VARCHAR(191) NOT NULL,
-    `description` VARCHAR(191) NULL,
+    `description` TEXT NULL,
     `order` INTEGER NOT NULL DEFAULT 0,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
@@ -51,7 +51,7 @@ CREATE TABLE `lesson` (
     `moduleId` VARCHAR(191) NULL,
     `submoduleId` VARCHAR(191) NULL,
     `title` VARCHAR(191) NOT NULL,
-    `content` VARCHAR(191) NOT NULL DEFAULT '',
+    `content` LONGTEXT NOT NULL DEFAULT '',
     `order` INTEGER NOT NULL DEFAULT 0,
     `difficulty` ENUM('APRENDIZ', 'JUNIOR', 'MID', 'SENIOR', 'ESPECIALISTA') NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -63,10 +63,10 @@ CREATE TABLE `lesson` (
 CREATE TABLE `exercise` (
     `id` VARCHAR(191) NOT NULL,
     `lessonId` VARCHAR(191) NOT NULL,
-    `type` ENUM('MULTIPLE_CHOICE', 'TRUE_FALSE', 'CODE') NOT NULL,
-    `question` VARCHAR(191) NOT NULL,
-    `options` VARCHAR(191) NOT NULL,
-    `correctAnswer` VARCHAR(191) NOT NULL,
+    `type` ENUM('MULTIPLE_CHOICE', 'TRUE_FALSE', 'CODE', 'DESARROLLO') NOT NULL,
+    `question` LONGTEXT NOT NULL,
+    `options` LONGTEXT NOT NULL,
+    `correctAnswer` LONGTEXT NOT NULL,
     `order` INTEGER NOT NULL DEFAULT 0,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
