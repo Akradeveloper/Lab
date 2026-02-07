@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE `User` (
+CREATE TABLE `user` (
     `id` VARCHAR(191) NOT NULL,
     `email` VARCHAR(191) NOT NULL,
     `passwordHash` VARCHAR(191) NOT NULL,
@@ -7,12 +7,12 @@ CREATE TABLE `User` (
     `role` ENUM('ALUMNO', 'ADMIN') NOT NULL DEFAULT 'ALUMNO',
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    UNIQUE INDEX `User_email_key`(`email`),
+    UNIQUE INDEX `user_email_key`(`email`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Progress` (
+CREATE TABLE `progress` (
     `id` VARCHAR(191) NOT NULL,
     `userId` VARCHAR(191) NOT NULL,
     `courseId` VARCHAR(191) NOT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE `Progress` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Module` (
+CREATE TABLE `module` (
     `id` VARCHAR(191) NOT NULL,
     `title` VARCHAR(191) NOT NULL,
     `description` VARCHAR(191) NULL,
@@ -34,7 +34,7 @@ CREATE TABLE `Module` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Submodule` (
+CREATE TABLE `submodule` (
     `id` VARCHAR(191) NOT NULL,
     `moduleId` VARCHAR(191) NOT NULL,
     `title` VARCHAR(191) NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE `Submodule` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Lesson` (
+CREATE TABLE `lesson` (
     `id` VARCHAR(191) NOT NULL,
     `moduleId` VARCHAR(191) NULL,
     `submoduleId` VARCHAR(191) NULL,
@@ -60,7 +60,7 @@ CREATE TABLE `Lesson` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `Exercise` (
+CREATE TABLE `exercise` (
     `id` VARCHAR(191) NOT NULL,
     `lessonId` VARCHAR(191) NOT NULL,
     `type` ENUM('MULTIPLE_CHOICE', 'TRUE_FALSE', 'CODE') NOT NULL,
@@ -74,7 +74,7 @@ CREATE TABLE `Exercise` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `LessonCheckAttempt` (
+CREATE TABLE `lessoncheckattempt` (
     `id` VARCHAR(191) NOT NULL,
     `userId` VARCHAR(191) NOT NULL,
     `lessonId` VARCHAR(191) NOT NULL,
@@ -85,7 +85,7 @@ CREATE TABLE `LessonCheckAttempt` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `ExerciseAttempt` (
+CREATE TABLE `exerciseattempt` (
     `id` VARCHAR(191) NOT NULL,
     `userId` VARCHAR(191) NOT NULL,
     `exerciseId` VARCHAR(191) NOT NULL,
@@ -97,25 +97,25 @@ CREATE TABLE `ExerciseAttempt` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `Progress` ADD CONSTRAINT `Progress_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `progress` ADD CONSTRAINT `progress_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Submodule` ADD CONSTRAINT `Submodule_moduleId_fkey` FOREIGN KEY (`moduleId`) REFERENCES `Module`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `submodule` ADD CONSTRAINT `submodule_moduleId_fkey` FOREIGN KEY (`moduleId`) REFERENCES `module`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Lesson` ADD CONSTRAINT `Lesson_moduleId_fkey` FOREIGN KEY (`moduleId`) REFERENCES `Module`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `lesson` ADD CONSTRAINT `lesson_moduleId_fkey` FOREIGN KEY (`moduleId`) REFERENCES `module`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Lesson` ADD CONSTRAINT `Lesson_submoduleId_fkey` FOREIGN KEY (`submoduleId`) REFERENCES `Submodule`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `lesson` ADD CONSTRAINT `lesson_submoduleId_fkey` FOREIGN KEY (`submoduleId`) REFERENCES `submodule`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Exercise` ADD CONSTRAINT `Exercise_lessonId_fkey` FOREIGN KEY (`lessonId`) REFERENCES `Lesson`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `exercise` ADD CONSTRAINT `exercise_lessonId_fkey` FOREIGN KEY (`lessonId`) REFERENCES `lesson`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `LessonCheckAttempt` ADD CONSTRAINT `LessonCheckAttempt_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `lessoncheckattempt` ADD CONSTRAINT `lessoncheckattempt_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `ExerciseAttempt` ADD CONSTRAINT `ExerciseAttempt_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `exerciseattempt` ADD CONSTRAINT `exerciseattempt_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `ExerciseAttempt` ADD CONSTRAINT `ExerciseAttempt_exerciseId_fkey` FOREIGN KEY (`exerciseId`) REFERENCES `Exercise`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `exerciseattempt` ADD CONSTRAINT `exerciseattempt_exerciseId_fkey` FOREIGN KEY (`exerciseId`) REFERENCES `exercise`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
