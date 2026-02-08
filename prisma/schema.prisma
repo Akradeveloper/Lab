@@ -24,6 +24,7 @@ model User {
   progress             Progress[]
   lessonCheckAttempts  LessonCheckAttempt[]
   exerciseAttempts     ExerciseAttempt[]
+  certificates         Certificate[]
 
   @@map("user")
 }
@@ -55,13 +56,14 @@ enum DifficultyLevel {
 }
 
 model Module {
-  id          String      @id @default(cuid())
-  title       String
-  description String?     @db.Text
-  order       Int         @default(0)
-  createdAt   DateTime    @default(now())
-  submodules  Submodule[]
-  lessons     Lesson[]
+  id           String        @id @default(cuid())
+  title        String
+  description  String?       @db.Text
+  order        Int           @default(0)
+  createdAt    DateTime      @default(now())
+  submodules   Submodule[]
+  lessons      Lesson[]
+  certificates Certificate[]
 
   @@map("module")
 }
@@ -133,4 +135,16 @@ model ExerciseAttempt {
   exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
   @@map("exerciseattempt")
+}
+
+model Certificate {
+  id          String   @id @default(cuid())
+  userId      String
+  moduleId    String
+  issuedAt    DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId])
+  @@map("certificate")
 }

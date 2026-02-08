@@ -12,6 +12,7 @@ import {
   type ModuleForProfile,
   type LessonInOrder,
 } from "@/lib/profile-stats";
+import { ProgressBar } from "@/components/progress-bar";
 
 export const metadata = {
   title: "Inicio - QA Lab",
@@ -354,14 +355,26 @@ export default async function DashboardPage() {
           </section>
         )}
 
-        {/* Resumen compacto */}
+        {/* Resumen compacto con barra de progreso */}
         <section
-          className="mb-8 rounded-lg border border-border bg-surface px-4 py-3"
+          className="mb-8 rounded-lg border border-border bg-surface px-4 py-4"
           aria-labelledby="dashboard-resumen-heading"
         >
           <h2 id="dashboard-resumen-heading" className="sr-only">
             Resumen de tu progreso
           </h2>
+          {(() => {
+            const totalLessons = progressByModule.reduce((s, p) => s + p.totalCount, 0);
+            return totalLessons > 0 ? (
+              <div className="mb-3">
+                <ProgressBar
+                  completed={totalLessonsCompleted}
+                  total={totalLessons}
+                  showLabel
+                />
+              </div>
+            ) : null;
+          })()}
           <p className="text-sm text-muted">
             <span className="font-medium text-foreground">
               {totalLessonsCompleted}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CodeEditor } from "@/components/code-editor";
 
 type ExerciseItem = {
   id: string;
@@ -518,32 +519,28 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
                     ))}
                   </select>
                 </label>
-                <label className="block">
-                  <span className="text-sm font-medium text-foreground">
+                <div className="block">
+                  <span className="mb-1 block text-sm font-medium text-foreground">
                     Código inicial (plantilla)
                   </span>
-                  <textarea
+                  <CodeEditor
+                    language={formCodeLanguage}
                     value={formCodeTemplate}
-                    onChange={(e) => setFormCodeTemplate(e.target.value)}
-                    spellCheck={false}
-                    rows={8}
-                    className="mt-1 w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-                    placeholder="Código que verá el alumno para completar o corregir"
+                    onChange={(val) => setFormCodeTemplate(val)}
+                    height="200px"
                   />
-                </label>
-                <label className="block">
-                  <span className="text-sm font-medium text-foreground">
+                </div>
+                <div className="block">
+                  <span className="mb-1 block text-sm font-medium text-foreground">
                     Solución (código correcto)
                   </span>
-                  <textarea
+                  <CodeEditor
+                    language={formCodeLanguage}
                     value={formCodeSolution}
-                    onChange={(e) => setFormCodeSolution(e.target.value)}
-                    spellCheck={false}
-                    rows={8}
-                    className="mt-1 w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-                    placeholder="Código exacto con el que se comparará la respuesta"
+                    onChange={(val) => setFormCodeSolution(val)}
+                    height="200px"
                   />
-                </label>
+                </div>
               </>
             )}
             {formType === "MULTIPLE_CHOICE" && (

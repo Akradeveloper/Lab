@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { DescriptionMarkdown } from "@/components/description-markdown";
 import { Header } from "@/components/Header";
 import { prisma } from "@/lib/prisma";
+import { ProgressBar } from "@/components/progress-bar";
 
 export const metadata = {
   title: "Módulos - QA Lab",
@@ -72,7 +73,7 @@ export default async function ModulosPage() {
                 <li key={mod.id}>
                   <Link
                     href={`/modulos/${mod.id}`}
-                    className="block rounded-lg border border-border bg-surface p-4 transition-colors hover:border-accent/50 hover:bg-surface/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    className="card-hover block rounded-lg border border-border bg-surface p-4 transition-colors hover:border-accent/50 hover:bg-surface/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
                     <h2 className="font-semibold text-foreground">
                       {mod.title}
@@ -86,6 +87,13 @@ export default async function ModulosPage() {
                     <p className="mt-2 text-sm text-accent">
                       {completedCount}/{totalCount} lecciones completadas
                     </p>
+                    <div className="mt-2">
+                      <ProgressBar
+                        completed={completedCount}
+                        total={totalCount}
+                        size="sm"
+                      />
+                    </div>
                   </Link>
                 </li>
               );

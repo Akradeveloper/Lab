@@ -7,6 +7,9 @@ import { getPreviousLessonIdsInModule } from "@/lib/lesson-order";
 import { prisma } from "@/lib/prisma";
 import { LessonContent } from "@/components/lesson-content";
 import { LessonExercises } from "@/components/lesson-exercises";
+import { CurriculumSidebar, type SidebarModule } from "@/components/curriculum-sidebar";
+import { LessonSplitLayout } from "@/components/lesson-split-layout";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 
 type Props = {
   params: Promise<{
@@ -173,51 +176,137 @@ export default async function LessonPage({ params }: Props) {
   const mod = lesson.submodule.module;
   const sub = lesson.submodule;
 
+  // Árbol del módulo para el sidebar
+  const moduleTree = await prisma.module.findUnique({
+    where: { id: moduleId },
+    select: {
+      id: true,
+      title: true,
+      lessons: {
+        where: { submoduleId: null },
+        orderBy: { order: "asc" },
+        select: { id: true, title: true, order: true },
+      },
+      submodules: {
+        orderBy: { order: "asc" },
+        select: {
+          id: true,
+          title: true,
+          lessons: {
+            orderBy: { order: "asc" },
+            select: { id: true, title: true, order: true },
+          },
+        },
+      },
+    },
+  });
+
+  const sidebarModule: SidebarModule = moduleTree
+    ? {
+        id: moduleTree.id,
+        title: moduleTree.title,
+        submodules: moduleTree.submodules,
+        lessons: moduleTree.lessons,
+      }
+    : { id: moduleId, title: mod.title, submodules: [], lessons: [] };
+
+  // Lecciones completadas del usuario en este módulo
+  const userProgress = await prisma.progress.findMany({
+    where: { userId: session.user!.id, courseId: moduleId },
+    select: { lessonId: true },
+  });
+  const completedIds = new Set(userProgress.map((p) => p.lessonId));
+
+  const hasCodeExercises = exercisesForClient.some((e) => e.type === "CODE");
+  const codeExercises = exercisesForClient.filter((e) => e.type === "CODE");
+  const nonCodeExercises = exercisesForClient.filter((e) => e.type !== "CODE");
+
+  const breadcrumbNav = (
+    <Breadcrumbs
+      items={[
+        { label: "Módulos", href: "/modulos" },
+        { label: mod.title, href: `/modulos/${moduleId}` },
+        { label: sub.title, href: `/modulos/${moduleId}/submodulos/${submoduleId}` },
+        { label: lesson.title },
+      ]}
+    />
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main id="main-content" className="mx-auto max-w-2xl px-4 py-8">
-        <nav className="mb-6 text-sm text-muted">
-          <Link
-            href="/modulos"
-            className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
-          >
-            ← Módulos
-          </Link>
-          <span className="mx-2">/</span>
-          <Link
-            href={`/modulos/${moduleId}`}
-            className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
-          >
-            {mod.title}
-          </Link>
-          <span className="mx-2">/</span>
-          <Link
-            href={`/modulos/${moduleId}/submodulos/${submoduleId}`}
-            className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
-          >
-            {sub.title}
-          </Link>
-        </nav>
-
-        <article className="mb-8">
-          <h1 className="mb-2 text-center text-3xl font-bold text-foreground">
-            {lesson.title}
-          </h1>
-          <div className="mb-8 h-px bg-border" aria-hidden />
-          <LessonContent content={lesson.content ?? ""} />
-        </article>
-
-        <LessonExercises
+      <div className="flex">
+        <CurriculumSidebar
+          module={sidebarModule}
+          completedLessonIds={completedIds}
+          currentLessonId={lessonId}
           moduleId={moduleId}
-          lessonId={lessonId}
-          exercises={exercisesForClient}
-          nextLesson={nextLesson}
-          prevLesson={prevLesson}
-          backHref={`/modulos/${moduleId}/submodulos/${submoduleId}`}
-          backLabel="Volver al submódulo"
         />
-      </main>
+        <main id="main-content" className="min-w-0 flex-1">
+          {hasCodeExercises ? (
+            <>
+              <div className="px-4 pt-8 lg:px-8">
+                {breadcrumbNav}
+              </div>
+              <LessonSplitLayout
+                left={
+                  <div>
+                    <article className="mb-8">
+                      <h1 className="mb-2 text-center text-3xl font-bold text-foreground">
+                        {lesson.title}
+                      </h1>
+                      <div className="mb-8 h-px bg-border" aria-hidden />
+                      <LessonContent content={lesson.content ?? ""} />
+                    </article>
+                    {nonCodeExercises.length > 0 && (
+                      <LessonExercises
+                        moduleId={moduleId}
+                        lessonId={lessonId}
+                        exercises={nonCodeExercises}
+                        nextLesson={null}
+                        prevLesson={null}
+                        backHref={`/modulos/${moduleId}/submodulos/${submoduleId}`}
+                        backLabel="Volver al submódulo"
+                      />
+                    )}
+                  </div>
+                }
+                right={
+                  <LessonExercises
+                    moduleId={moduleId}
+                    lessonId={lessonId}
+                    exercises={codeExercises}
+                    nextLesson={nextLesson}
+                    prevLesson={prevLesson}
+                    backHref={`/modulos/${moduleId}/submodulos/${submoduleId}`}
+                    backLabel="Volver al submódulo"
+                  />
+                }
+              />
+            </>
+          ) : (
+            <div className="mx-auto max-w-2xl px-4 py-8 lg:px-8">
+              {breadcrumbNav}
+              <article className="mb-8">
+                <h1 className="mb-2 text-center text-3xl font-bold text-foreground">
+                  {lesson.title}
+                </h1>
+                <div className="mb-8 h-px bg-border" aria-hidden />
+                <LessonContent content={lesson.content ?? ""} />
+              </article>
+              <LessonExercises
+                moduleId={moduleId}
+                lessonId={lessonId}
+                exercises={exercisesForClient}
+                nextLesson={nextLesson}
+                prevLesson={prevLesson}
+                backHref={`/modulos/${moduleId}/submodulos/${submoduleId}`}
+                backLabel="Volver al submódulo"
+              />
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 }

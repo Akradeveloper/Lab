@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
+import { CodeEditor } from "@/components/code-editor";
+import { useToast } from "@/components/toast";
 
 type Exercise =
   | {
@@ -53,6 +55,7 @@ export function LessonExercises({
   backHref,
   backLabel,
 }: Props) {
+  const { toast } = useToast();
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState<{
@@ -62,9 +65,38 @@ export function LessonExercises({
   const [completed, setCompleted] = useState(false);
   const [completing, setCompleting] = useState(false);
 
+  // Sistema de pistas
+  const [failedAttempts, setFailedAttempts] = useState<Record<string, number>>({});
+  const [hints, setHints] = useState<Record<string, string>>({});
+  const [loadingHint, setLoadingHint] = useState<Record<string, boolean>>({});
+
   function setAnswer(exerciseId: string, value: unknown) {
     setAnswers((prev) => ({ ...prev, [exerciseId]: value }));
     setCheckResult(null);
+  }
+
+  /** Solicitar pista para un ejercicio */
+  async function handleGetHint(exerciseId: string) {
+    setLoadingHint((prev) => ({ ...prev, [exerciseId]: true }));
+    try {
+      const res = await fetch(`/api/curriculum/lessons/${lessonId}/hint`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ exerciseId }),
+      });
+      const data = await res.json();
+      setHints((prev) => ({
+        ...prev,
+        [exerciseId]: data.hint ?? "No se pudo generar una pista.",
+      }));
+    } catch {
+      setHints((prev) => ({
+        ...prev,
+        [exerciseId]: "Error al obtener la pista. Inténtalo de nuevo.",
+      }));
+    } finally {
+      setLoadingHint((prev) => ({ ...prev, [exerciseId]: false }));
+    }
   }
 
   async function handleCheck() {
@@ -92,10 +124,22 @@ export function LessonExercises({
         allCorrect: data.allCorrect,
         results: data.results,
       });
+
+      // Actualizar intentos fallidos
+      if (data.results) {
+        const newFailed: Record<string, number> = { ...failedAttempts };
+        for (const r of data.results as { exerciseId: string; correct: boolean }[]) {
+          if (!r.correct) {
+            newFailed[r.exerciseId] = (newFailed[r.exerciseId] ?? 0) + 1;
+          }
+        }
+        setFailedAttempts(newFailed);
+      }
+
       if (data.allCorrect) {
         await handleComplete();
       }
-    } catch (e) {
+    } catch {
       setCheckResult({
         allCorrect: false,
         results: undefined,
@@ -104,6 +148,19 @@ export function LessonExercises({
       setChecking(false);
     }
   }
+
+  const fireConfetti = useCallback(async () => {
+    try {
+      const confetti = (await import("canvas-confetti")).default;
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    } catch {
+      // canvas-confetti no disponible, ignorar
+    }
+  }, []);
 
   async function handleComplete() {
     setCompleting(true);
@@ -114,8 +171,18 @@ export function LessonExercises({
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Error al guardar progreso");
       setCompleted(true);
+      toast("¡Lección completada!", "success");
+
+      // Si se emitió un certificado, mostrar confeti y notificación especial
+      if (data.certificateId) {
+        fireConfetti();
+        setTimeout(() => {
+          toast("¡Has obtenido un certificado por completar el módulo!", "success");
+        }, 500);
+      }
     } catch {
       setCheckResult((prev) => (prev ? { ...prev, allCorrect: false } : null));
+      toast("Error al guardar el progreso", "error");
     } finally {
       setCompleting(false);
     }
@@ -203,7 +270,7 @@ export function LessonExercises({
 
   const resultByEx = checkResult?.results
     ? Object.fromEntries(
-        checkResult.results.map((r) => [r.exerciseId, r.correct])
+        checkResult.results.map((r) => [r.exerciseId, r.correct]),
       )
     : null;
 
@@ -211,90 +278,165 @@ export function LessonExercises({
     <section className="space-y-6">
       <h2 className="text-lg font-semibold text-foreground">Ejercicios</h2>
 
-      {exercises.map((ex) => (
-        <div
-          key={ex.id}
-          className={`rounded-lg border bg-surface p-4 ${
-            resultByEx && resultByEx[ex.id] === false
-              ? "border-error bg-error-bg/20"
-              : "border-border"
-          }`}
-        >
-          <p className="mb-3 font-medium text-foreground">{ex.question}</p>
-          {ex.type === "DESARROLLO" && (
-            <p className="text-sm text-muted">
-              Ejercicio de desarrollo (próximamente). Este ejercicio se
-              evaluará en una futura versión.
-            </p>
-          )}
-          {ex.type === "CODE" && (
-            <div className="mt-2">
-              <label className="block text-sm text-muted mb-1">
-                Edita el código (puedes hacer pocos cambios para que pase los tests):
-              </label>
-              <textarea
-                value={
-                  answers[ex.id] !== undefined
-                    ? String(answers[ex.id])
-                    : ex.template
-                }
-                onChange={(e) => setAnswer(ex.id, e.target.value)}
-                spellCheck={false}
-                rows={12}
-                className="mt-1 w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-              />
-            </div>
-          )}
-          <div className="space-y-2">
-            {ex.type === "TRUE_FALSE" && (
-              <>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name={ex.id}
-                    checked={
-                      answers[ex.id] === true || answers[ex.id] === "true"
-                    }
-                    onChange={() => setAnswer(ex.id, true)}
-                    className="rounded border-border text-accent focus:ring-accent"
-                  />
-                  <span className="text-foreground">Verdadero</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name={ex.id}
-                    checked={
-                      answers[ex.id] === false || answers[ex.id] === "false"
-                    }
-                    onChange={() => setAnswer(ex.id, false)}
-                    className="rounded border-border text-accent focus:ring-accent"
-                  />
-                  <span className="text-foreground">Falso</span>
-                </label>
-              </>
+      {exercises.map((ex) => {
+        const globalRes = resultByEx?.[ex.id];
+        const isCorrect = globalRes === true;
+        const isWrong = globalRes === false;
+        const attempts = failedAttempts[ex.id] ?? 0;
+        const canShowHint = attempts >= 2 && !hints[ex.id];
+        const hint = hints[ex.id];
+
+        return (
+          <div
+            key={ex.id}
+            className={`rounded-lg border bg-surface p-4 transition-colors ${
+              isCorrect
+                ? "border-green-500/50 bg-green-500/5"
+                : isWrong
+                  ? "border-error bg-error-bg/20"
+                  : "border-border"
+            }`}
+          >
+            <p className="mb-3 font-medium text-foreground">{ex.question}</p>
+
+            {ex.type === "DESARROLLO" && (
+              <p className="text-sm text-muted">
+                Ejercicio de desarrollo (próximamente). Este ejercicio se
+                evaluará en una futura versión.
+              </p>
             )}
-            {ex.type === "MULTIPLE_CHOICE" &&
-              ex.options.map((opt, idx) => (
-                <label key={idx} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name={ex.id}
-                    checked={answers[ex.id] === idx}
-                    onChange={() => setAnswer(ex.id, idx)}
-                    className="rounded border-border text-accent focus:ring-accent"
-                  />
-                  <span className="text-foreground">{opt}</span>
-                </label>
-              ))}
+
+            {ex.type === "CODE" && (
+              <div className="mt-2 space-y-3">
+                <p className="text-sm text-muted">
+                  Edita el código para que pase los tests:
+                </p>
+                <CodeEditor
+                  language={ex.language}
+                  value={
+                    answers[ex.id] !== undefined
+                      ? String(answers[ex.id])
+                      : ex.template
+                  }
+                  onChange={(val) => setAnswer(ex.id, val)}
+                  height="300px"
+                />
+                {/* Test cases visibles */}
+                {ex.testCases.length > 0 && (
+                  <div className="rounded border border-border bg-background p-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">
+                      Test cases
+                    </p>
+                    <div className="space-y-1">
+                      {ex.testCases.map((tc, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-2 font-mono text-xs"
+                        >
+                          <span className="text-muted">#{i + 1}</span>
+                          <span className="text-foreground">
+                            input: <code className="text-accent">{tc.input}</code>
+                          </span>
+                          <span className="text-muted">→</span>
+                          <span className="text-foreground">
+                            esperado: <code className="text-accent">{tc.expectedOutput}</code>
+                          </span>
+                          {isCorrect && (
+                            <span className="ml-auto text-green-500">✓</span>
+                          )}
+                          {isWrong && (
+                            <span className="ml-auto text-error">✗</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {ex.type === "TRUE_FALSE" && (
+                <>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name={ex.id}
+                      checked={
+                        answers[ex.id] === true || answers[ex.id] === "true"
+                      }
+                      onChange={() => setAnswer(ex.id, true)}
+                      className="rounded border-border text-accent focus:ring-accent"
+                    />
+                    <span className="text-foreground">Verdadero</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name={ex.id}
+                      checked={
+                        answers[ex.id] === false || answers[ex.id] === "false"
+                      }
+                      onChange={() => setAnswer(ex.id, false)}
+                      className="rounded border-border text-accent focus:ring-accent"
+                    />
+                    <span className="text-foreground">Falso</span>
+                  </label>
+                </>
+              )}
+              {ex.type === "MULTIPLE_CHOICE" &&
+                ex.options.map((opt, idx) => (
+                  <label key={idx} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name={ex.id}
+                      checked={answers[ex.id] === idx}
+                      onChange={() => setAnswer(ex.id, idx)}
+                      className="rounded border-border text-accent focus:ring-accent"
+                    />
+                    <span className="text-foreground">{opt}</span>
+                  </label>
+                ))}
+            </div>
+
+            {/* Resultado individual */}
+            {isCorrect && (
+              <p className="mt-2 text-sm font-medium text-green-500">
+                ¡Correcto!
+              </p>
+            )}
+            {isWrong && (
+              <p className="mt-2 text-sm text-error">
+                Respuesta incorrecta. Revisa tu respuesta e inténtalo de nuevo.
+              </p>
+            )}
+
+            {/* Pista */}
+            {hint && (
+              <div className="mt-3 rounded border border-accent/30 bg-accent/5 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-accent">
+                  Pista
+                </p>
+                <p className="mt-1 text-sm text-foreground">{hint}</p>
+              </div>
+            )}
+
+            {/* Botón de pista (aparece tras 2 intentos fallidos) */}
+            {canShowHint && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={() => handleGetHint(ex.id)}
+                  disabled={loadingHint[ex.id]}
+                  className="rounded border border-accent/30 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
+                >
+                  {loadingHint[ex.id] ? "Generando pista…" : "Ver pista"}
+                </button>
+              </div>
+            )}
           </div>
-          {resultByEx && resultByEx[ex.id] === false && (
-            <p className="mt-2 text-sm text-error">
-              Respuesta incorrecta. Inténtalo de nuevo.
-            </p>
-          )}
-        </div>
-      ))}
+        );
+      })}
 
       {checkResult && !checkResult.allCorrect && checkResult.results && (
         <p className="rounded border border-error bg-error-bg px-4 py-2 text-sm text-error">
@@ -312,13 +454,13 @@ export function LessonExercises({
           {checking || completing
             ? "Comprobando…"
             : exercises.length > 0
-            ? "Comprobar respuestas"
-            : "Marcar como completada"}
+              ? "Comprobar todo"
+              : "Marcar como completada"}
         </button>
         {prevLesson && (
           <Link
             href={lessonHref(moduleId, prevLesson)}
-            className="text-sm text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
+            className="rounded text-sm text-muted transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             ← {prevLesson.title}
           </Link>

@@ -5,6 +5,8 @@ import { authOptions } from "@/lib/auth";
 import { DescriptionMarkdown } from "@/components/description-markdown";
 import { Header } from "@/components/Header";
 import { prisma } from "@/lib/prisma";
+import { Breadcrumbs } from "@/components/breadcrumbs";
+import { ProgressBar } from "@/components/progress-bar";
 
 type Props = {
   params: Promise<{ moduleId: string }>;
@@ -66,14 +68,12 @@ export default async function ModuloPage({ params, searchParams }: Props) {
     <div className="min-h-screen bg-background">
       <Header />
       <main id="main-content" className="mx-auto max-w-2xl px-4 py-8">
-        <nav className="mb-6 text-sm text-muted">
-          <Link
-            href="/modulos"
-            className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
-          >
-            ← Módulos
-          </Link>
-        </nav>
+        <Breadcrumbs
+          items={[
+            { label: "Módulos", href: "/modulos" },
+            { label: module_.title },
+          ]}
+        />
         <h1 className="mb-2 text-2xl font-semibold text-foreground">
           {module_.title}
         </h1>
@@ -113,9 +113,16 @@ export default async function ModuloPage({ params, searchParams }: Props) {
                       className="mb-3 text-sm"
                     />
                   )}
-                  <p className="mb-3 text-sm text-accent">
+                  <p className="mb-2 text-sm text-accent">
                     {subCompleted}/{subTotal} lecciones completadas
                   </p>
+                  <div className="mb-3">
+                    <ProgressBar
+                      completed={subCompleted}
+                      total={subTotal}
+                      size="sm"
+                    />
+                  </div>
                   <Link
                     href={`/modulos/${moduleId}/submodulos/${sub.id}`}
                     className="inline-block rounded border border-accent bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -125,9 +132,13 @@ export default async function ModuloPage({ params, searchParams }: Props) {
                 </div>
               );
             })}
-            <p className="mt-4 text-sm text-accent">
-              {completedCount}/{totalCount} lecciones completadas en total
-            </p>
+            <div className="mt-4">
+              <ProgressBar
+                completed={completedCount}
+                total={totalCount}
+                showLabel
+              />
+            </div>
           </>
         ) : (
           <>
