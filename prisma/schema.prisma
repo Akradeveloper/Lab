@@ -84,7 +84,7 @@ model Lesson {
   moduleId     String?
   submoduleId  String?
   title        String
-  content      String          @default("") @db.LongText
+  content      String          @db.LongText
   order        Int             @default(0)
   difficulty   DifficultyLevel?
   createdAt    DateTime        @default(now())
@@ -102,6 +102,7 @@ model Exercise {
   question        String            @db.LongText
   options         String            @db.LongText  // JSON: MULTIPLE_CHOICE/TRUE_FALSE = array of options; CODE = { language, template, testCases }
   correctAnswer   String            @db.LongText  // JSON: MULTIPLE_CHOICE = index (number), TRUE_FALSE = boolean, CODE = "" or reserved
+  difficulty      DifficultyLevel?                 // Solo aplica a ejercicios de tipo CODE
   order           Int               @default(0)
   createdAt       DateTime          @default(now())
   lesson          Lesson            @relation(fields: [lessonId], references: [id], onDelete: Cascade)

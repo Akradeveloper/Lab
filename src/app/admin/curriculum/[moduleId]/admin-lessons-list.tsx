@@ -174,9 +174,6 @@ export function AdminLessonsList({
       topic,
       difficulty: aiDifficulty.trim() || undefined,
     };
-    if (aiAlsoExercises && aiExerciseTypes.includes("CODE")) {
-      lessonBody.language = aiCodeLanguage;
-    }
     fetch(generateUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -193,6 +190,9 @@ export function AdminLessonsList({
           };
           if (aiExerciseTypes.includes("CODE")) {
             exercisesBody.codeLanguage = aiCodeLanguage;
+            if (aiDifficulty.trim()) {
+              exercisesBody.codeDifficulty = aiDifficulty.trim();
+            }
           }
           return fetch(`/api/admin/lessons/${lesson.id}/generate-exercises`, {
             method: "POST",
@@ -481,30 +481,48 @@ export function AdminLessonsList({
                   </label>
                 </div>
                 {aiExerciseTypes.includes("CODE") && (
-                  <div className="mt-2">
-                    <span className="text-sm font-medium text-foreground">
-                      Lenguaje para teoría, ejemplos y ejercicios de código
-                    </span>
-                    <select
-                      value={aiCodeLanguage}
-                      onChange={(e) =>
-                        setAiCodeLanguage(
-                          e.target.value as
-                            | "python"
-                            | "javascript"
-                            | "java"
-                            | "typescript"
-                        )
-                      }
-                      className="mt-1 block rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-                    >
-                      {AI_CODE_LANGUAGES.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <>
+                    <div className="mt-2">
+                      <span className="text-sm font-medium text-foreground">
+                        Lenguaje para ejercicios de código
+                      </span>
+                      <select
+                        value={aiCodeLanguage}
+                        onChange={(e) =>
+                          setAiCodeLanguage(
+                            e.target.value as
+                              | "python"
+                              | "javascript"
+                              | "java"
+                              | "typescript"
+                          )
+                        }
+                        className="mt-1 block rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                      >
+                        {AI_CODE_LANGUAGES.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-sm font-medium text-foreground">
+                        Dificultad de los ejercicios de código
+                      </span>
+                      <select
+                        value={aiDifficulty}
+                        onChange={(e) => setAiDifficulty(e.target.value)}
+                        className="mt-1 block rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                      >
+                        {DIFFICULTY_OPTIONS.map((opt) => (
+                          <option key={opt.value || "empty"} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
                 )}
               </div>
             )}

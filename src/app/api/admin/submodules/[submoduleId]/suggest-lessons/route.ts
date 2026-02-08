@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { buildSuggestLessonsPrompt } from "@/lib/ai-prompts";
 
 type Params = { params: Promise<{ submoduleId: string }> };
 
@@ -21,7 +22,7 @@ export async function GET(_request: Request, { params }: Params) {
           "OPENAI_API_KEY no configurada. Añádela en .env para usar las sugerencias.",
         suggestions: [],
       },
-      { status: 503 }
+      { status: 503 },
     );
   }
 
@@ -29,7 +30,7 @@ export async function GET(_request: Request, { params }: Params) {
   if (!submoduleId) {
     return NextResponse.json(
       { error: "ID de submódulo requerido", suggestions: [] },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -41,7 +42,7 @@ export async function GET(_request: Request, { params }: Params) {
     if (!submodule) {
       return NextResponse.json(
         { error: "Submódulo no encontrado", suggestions: [] },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -51,20 +52,13 @@ export async function GET(_request: Request, { params }: Params) {
       select: { title: true, order: true },
     });
 
-    const lessonsList = existingLessons
-      .map((l, i) => `${i + 1}. ${l.title}`)
-      .join("\n");
-
-    const prompt = `Eres un experto en diseño de currículo para cursos de QA (Quality Assurance / testing).
-Módulo: "${submodule.module.title}".
-Submódulo: "${submodule.title}".
-${submodule.description ? `Descripción del submódulo: ${submodule.description}\n` : ""}
-${submodule.module.description ? `Descripción del módulo: ${submodule.module.description}\n` : ""}
-Lecciones ya creadas en este submódulo (no repitas estos temas):
-${lessonsList || "(ninguna todavía)"}
-
-Sugiere entre 3 y 5 temas concretos para las siguientes lecciones, sin repetir los existentes, en orden de dificultad creciente.
-Responde ÚNICAMENTE con un JSON válido: { "suggestions": [ "tema 1", "tema 2", ... ] }.`;
+    const prompt = buildSuggestLessonsPrompt({
+      moduleTitle: submodule.module.title,
+      moduleDescription: submodule.module.description,
+      submoduleTitle: submodule.title,
+      submoduleDescription: submodule.description,
+      existingLessons,
+    });
 
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
@@ -81,7 +75,9 @@ Responde ÚNICAMENTE con un JSON válido: { "suggestions": [ "tema 1", "tema 2",
     try {
       const parsed = JSON.parse(raw) as { suggestions?: unknown[] };
       const list = Array.isArray(parsed.suggestions)
-        ? parsed.suggestions.filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+        ? parsed.suggestions.filter(
+            (s): s is string => typeof s === "string" && s.trim().length > 0,
+          )
         : [];
       return NextResponse.json({ suggestions: list });
     } catch {
@@ -93,7 +89,7 @@ Responde ÚNICAMENTE con un JSON válido: { "suggestions": [ "tema 1", "tema 2",
     }
     return NextResponse.json(
       { error: "Error al obtener sugerencias", suggestions: [] },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

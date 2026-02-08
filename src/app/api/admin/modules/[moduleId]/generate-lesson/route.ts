@@ -1,26 +1,18 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import type { DifficultyLevel } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  buildLessonSystemPrompt,
+  buildLessonUserPrompt,
+  VALID_DIFFICULTY,
+} from "@/lib/ai-prompts";
+import type { DifficultyLevel } from "@prisma/client";
 
 type Params = { params: Promise<{ moduleId: string }> };
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const MAX_PREV_CONTENT_LENGTH = 280;
-const VALID_DIFFICULTY = ["APRENDIZ", "JUNIOR", "MID", "SENIOR", "ESPECIALISTA"] as const;
-
-function difficultyPromptFragment(difficulty: string): string {
-  const desc: Record<string, string> = {
-    APRENDIZ: "introductorio: sin asumir experiencia previa, conceptos muy básicos.",
-    JUNIOR: "nivel junior: conceptos básicos aplicados, ejemplos sencillos.",
-    MID: "nivel intermedio: asume conocimientos previos, mayor profundidad.",
-    SENIOR: "nivel senior: contenido avanzado, mejores prácticas y casos reales.",
-    ESPECIALISTA: "nivel especialista: experto, temas complejos y optimización.",
-  };
-  return `Nivel de la lección: ${difficulty}. ${desc[difficulty] ?? "Adapta el contenido a este nivel."} El contenido debe ajustarse a esta profundidad.`;
-}
 
 export async function POST(request: Request, { params }: Params) {
   const session = await getServerSession(authOptions);
@@ -34,7 +26,7 @@ export async function POST(request: Request, { params }: Params) {
         error:
           "OPENAI_API_KEY no configurada. Añádela en .env para usar la generación con IA.",
       },
-      { status: 503 }
+      { status: 503 },
     );
   }
 
@@ -42,7 +34,7 @@ export async function POST(request: Request, { params }: Params) {
   if (!moduleId) {
     return NextResponse.json(
       { error: "ID de módulo requerido" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -53,20 +45,17 @@ export async function POST(request: Request, { params }: Params) {
     if (!topic) {
       return NextResponse.json(
         { error: "El tema o título de la lección es obligatorio" },
-        { status: 400 }
+        { status: 400 },
       );
     }
+
     const difficultyValue =
       body?.difficulty != null &&
       typeof body.difficulty === "string" &&
-      VALID_DIFFICULTY.includes(body.difficulty as (typeof VALID_DIFFICULTY)[number])
+      VALID_DIFFICULTY.includes(
+        body.difficulty as (typeof VALID_DIFFICULTY)[number],
+      )
         ? (body.difficulty as DifficultyLevel)
-        : undefined;
-
-    const VALID_LANGUAGES = ["python", "javascript", "java", "typescript"] as const;
-    const language =
-      typeof body?.language === "string" && VALID_LANGUAGES.includes(body.language as (typeof VALID_LANGUAGES)[number])
-        ? body.language
         : undefined;
 
     const module_ = await prisma.module.findUnique({
@@ -76,13 +65,16 @@ export async function POST(request: Request, { params }: Params) {
     if (!module_) {
       return NextResponse.json(
         { error: "Módulo no encontrado" },
-        { status: 404 }
+        { status: 404 },
       );
     }
     if (module_._count.submodules > 0) {
       return NextResponse.json(
-        { error: "Este módulo tiene submódulos; usa la generación desde un submódulo." },
-        { status: 400 }
+        {
+          error:
+            "Este módulo tiene submódulos; usa la generación desde un submódulo.",
+        },
+        { status: 400 },
       );
     }
 
@@ -92,44 +84,13 @@ export async function POST(request: Request, { params }: Params) {
       select: { title: true, order: true, content: true },
     });
 
-    const previousContext = existingLessons
-      .map((l, i) => {
-        const summary =
-          l.content.length > MAX_PREV_CONTENT_LENGTH
-            ? l.content.slice(0, MAX_PREV_CONTENT_LENGTH) + "..."
-            : l.content;
-        return `Lección ${i + 1} (orden ${l.order}): "${l.title}". Contenido: ${summary}`;
-      })
-      .join("\n\n");
-
-    const systemPrompt = `Eres un creador de contenido para un curso profesional de QA (Quality Assurance / testing).
-Genera lecciones en español con tono formal y didáctico, sin coloquialismos. Usa términos técnicos con precisión.
-
-Estructura obligatoria del contenido en Markdown:
-1) **Objetivos de aprendizaje**: lista breve (3-5 ítems) al inicio con lo que el alumno logrará.
-2) **Desarrollo**: secciones con ## (por ejemplo "Conceptos clave", "Teoría", "Ejemplos"). Párrafos cortos, listas cuando ayude. Si el tema es orientado a código (tests, automatización, scripts), incluye bloques de código con \`\`\` y explicación paso a paso.
-3) **Resumen o Puntos clave**: cierre breve al final.
-
-Responde ÚNICAMENTE con un JSON válido, sin markdown ni texto extra:
-{"title": "Título de la lección", "content": "Contenido en Markdown siguiendo la estructura anterior"}`;
-
-    const difficultyInstruction = difficultyValue
-      ? difficultyPromptFragment(difficultyValue) + "\n\n"
-      : "";
-
-    const languageInstruction = language
-      ? `Todos los ejemplos de código y la teoría deben usar únicamente el lenguaje ${language}. Los bloques de código en el contenido deben estar en ${language}. Mantén el resto del texto en español.\n\n`
-      : "";
-
-    const userPrompt = `${difficultyInstruction}${languageInstruction}Módulo: "${module_.title}".
-${module_.description ? `Descripción del módulo: ${module_.description}\n` : ""}
-${
-  previousContext
-    ? `Lecciones ya existentes en este módulo (para que la nueva sea un poco más avanzada):\n${previousContext}\n\n`
-    : "Es la primera lección del módulo.\n\n"
-}Genera la siguiente lección sobre este tema: "${topic}".
-El contenido debe ser un poco más avanzado que las lecciones anteriores si las hay.
-Si el tema es orientado a código (p. ej. Jest, Selenium, scripts, APIs), la sección de ejemplos debe incluir código real en bloques \`\`\` y explicación paso a paso.`;
+    const systemPrompt = buildLessonSystemPrompt();
+    const userPrompt = buildLessonUserPrompt({
+      moduleTitle: module_.title,
+      moduleDescription: module_.description,
+      existingLessons,
+      topic,
+    });
 
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
@@ -145,7 +106,7 @@ Si el tema es orientado a código (p. ej. Jest, Selenium, scripts, APIs), la sec
     if (!raw) {
       return NextResponse.json(
         { error: "La IA no devolvió contenido" },
-        { status: 502 }
+        { status: 502 },
       );
     }
 
@@ -155,7 +116,7 @@ Si el tema es orientado a código (p. ej. Jest, Selenium, scripts, APIs), la sec
     } catch {
       return NextResponse.json(
         { error: "Respuesta de la IA no es JSON válido" },
-        { status: 502 }
+        { status: 502 },
       );
     }
 
@@ -189,7 +150,7 @@ Si el tema es orientado a código (p. ej. Jest, Selenium, scripts, APIs), la sec
             ? "Error de configuración con OpenAI. Revisa OPENAI_API_KEY."
             : "Error al generar la lección con IA.",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
