@@ -44,6 +44,7 @@ type Props = {
   prevLesson: LessonNav | null;
   backHref: string;
   backLabel: string;
+  isProjectLesson?: boolean;
 };
 
 export function LessonExercises({
@@ -54,6 +55,7 @@ export function LessonExercises({
   prevLesson,
   backHref,
   backLabel,
+  isProjectLesson = false,
 }: Props) {
   const { toast } = useToast();
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
@@ -64,6 +66,7 @@ export function LessonExercises({
   } | null>(null);
   const [completed, setCompleted] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [exercisesPassedForProject, setExercisesPassedForProject] = useState(false);
 
   // Sistema de pistas
   const [failedAttempts, setFailedAttempts] = useState<Record<string, number>>({});
@@ -137,7 +140,11 @@ export function LessonExercises({
       }
 
       if (data.allCorrect) {
-        await handleComplete();
+        if (isProjectLesson) {
+          setExercisesPassedForProject(true);
+        } else {
+          await handleComplete();
+        }
       }
     } catch {
       setCheckResult({
@@ -203,6 +210,17 @@ export function LessonExercises({
     });
 
   if (exercises.length === 0) {
+    if (isProjectLesson) {
+      return (
+        <section className="rounded-lg border border-border bg-surface p-6">
+          <p className="mb-4 text-muted">
+            Esta lección es un proyecto. Entrega tu proyecto en el bloque de
+            abajo para que un administrador lo revise. Solo cuando aprueben tu
+            entrega se marcará la lección como completada.
+          </p>
+        </section>
+      );
+    }
     return (
       <section className="rounded-lg border border-border bg-surface p-6">
         <p className="mb-4 text-muted">
@@ -238,6 +256,17 @@ export function LessonExercises({
             </div>
           </div>
         )}
+      </section>
+    );
+  }
+
+  if (isProjectLesson && exercisesPassedForProject) {
+    return (
+      <section className="rounded-lg border border-border bg-surface p-6">
+        <p className="mb-4 font-medium text-accent">
+          Has superado los ejercicios. Para completar la lección, entrega el
+          proyecto en el bloque de abajo para que un administrador lo revise.
+        </p>
       </section>
     );
   }
@@ -455,7 +484,9 @@ export function LessonExercises({
             ? "Comprobando…"
             : exercises.length > 0
               ? "Comprobar todo"
-              : "Marcar como completada"}
+              : isProjectLesson
+                ? ""
+                : "Marcar como completada"}
         </button>
         {prevLesson && (
           <Link

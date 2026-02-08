@@ -359,3 +359,74 @@ ${contentSnippet}
 Sugiere entre 4 y 6 ideas de ejercicios (pueden ser de tipo test, verdadero/falso o código si el contenido es adecuado). Los ejercicios pueden requerir recordar conceptos de lecciones anteriores.
 Responde ÚNICAMENTE con un JSON válido: { "suggestions": [ { "type": "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CODE", "description": "enunciado o idea breve del ejercicio" }, ... ] }.`;
 }
+
+// ---------------------------------------------------------------------------
+// Prompts para PROYECTO de fin de módulo/submódulo
+// ---------------------------------------------------------------------------
+
+/**
+ * Prompt de sistema para generar el enunciado de un proyecto.
+ * Regla crítica: el proyecto debe basarse ÚNICAMENTE en el contenido proporcionado.
+ */
+export function buildProjectSystemPrompt(): string {
+  return `Eres un creador de enunciados de proyectos para un curso de QA (Quality Assurance / testing).
+
+Tu tarea es generar el enunciado de un proyecto de fin de módulo o submódulo que el alumno debe realizar.
+
+REGLA OBLIGATORIA: El proyecto debe basarse ÚNICAMENTE en los conceptos, herramientas y temas que aparecen en el contenido de lecciones que se te proporciona. No inventes herramientas, frameworks, tecnologías ni requisitos que no estén mencionados o explicados en ese contenido. Si algo no aparece en el texto proporcionado, no debe formar parte del proyecto. Solo puedes usar lo que está explícitamente en el material dado.
+
+El enunciado debe incluir en Markdown:
+- Objetivo del proyecto (qué debe lograr el alumno).
+- Contexto breve (basado en las lecciones vistas).
+- Requisitos o criterios de entrega (todos derivados del contenido de las lecciones).
+- Opcional: sugerencia de estructura o entregables.
+
+Responde ÚNICAMENTE con un JSON válido, sin markdown ni texto extra:
+{"title": "Título del proyecto", "content": "Enunciado completo en Markdown"}`;
+}
+
+export type ProjectContext = {
+  moduleTitle: string;
+  moduleDescription?: string | null;
+  submoduleTitle?: string | null;
+  submoduleDescription?: string | null;
+  previousLessons: Array< { title: string; order: number; content: string } >;
+};
+
+/**
+ * Construye el prompt de usuario para generar el proyecto.
+ * Incluye el contenido real de las lecciones anteriores (ya truncado por el llamador).
+ */
+export function buildProjectUserPrompt(ctx: ProjectContext): string {
+  const lessonsBlock = ctx.previousLessons
+    .map(
+      (l, i) =>
+        `--- Lección ${i + 1} (orden ${l.order}): "${l.title}" ---\n${l.content}`
+    )
+    .join("\n\n");
+
+  const parts: string[] = [
+    "A continuación está el contenido de las lecciones que el alumno ya ha visto. Solo este contenido existe; no hay más material.",
+    "",
+    lessonsBlock,
+    "",
+    "---",
+    "",
+    `Módulo: "${ctx.moduleTitle}".`,
+  ];
+  if (ctx.submoduleTitle) {
+    parts.push(`Submódulo: "${ctx.submoduleTitle}".`);
+  }
+  if (ctx.submoduleDescription) {
+    parts.push(`Descripción del submódulo: ${ctx.submoduleDescription}`);
+  }
+  if (ctx.moduleDescription) {
+    parts.push(`Descripción del módulo: ${ctx.moduleDescription}`);
+  }
+  parts.push(
+    "",
+    "Genera el enunciado del proyecto usando SOLO los temas y conceptos que aparecen en el contenido anterior. No añadas nada que no esté en ese contenido. El proyecto debe ser realizable con lo que se ha visto en esas lecciones."
+  );
+
+  return parts.join("\n");
+}

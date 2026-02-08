@@ -7,6 +7,7 @@ import { getPreviousLessonIdsInModule } from "@/lib/lesson-order";
 import { prisma } from "@/lib/prisma";
 import { LessonContent } from "@/components/lesson-content";
 import { LessonExercises } from "@/components/lesson-exercises";
+import { ProjectSubmissionForm } from "@/components/project-submission-form";
 import { CurriculumSidebar, type SidebarModule } from "@/components/curriculum-sidebar";
 import { LessonSplitLayout } from "@/components/lesson-split-layout";
 import { Breadcrumbs } from "@/components/breadcrumbs";
@@ -196,9 +197,19 @@ export default async function LessonPage({ params }: Props) {
                       <h1 className="mb-2 text-center text-3xl font-bold text-foreground">
                         {lesson.title}
                       </h1>
+                      {(lesson.lessonType ?? "standard") === "project" && (
+                        <p className="mb-2 text-center text-sm font-medium text-accent">
+                          Proyecto de fin de módulo
+                        </p>
+                      )}
                       <div className="mb-8 h-px bg-border" aria-hidden />
                       <LessonContent content={lesson.content ?? ""} />
                     </article>
+                    {(lesson.lessonType ?? "standard") === "project" && (
+                      <div className="mb-8">
+                        <ProjectSubmissionForm lessonId={lessonId} />
+                      </div>
+                    )}
                     {nonCodeExercises.length > 0 && (
                       <LessonExercises
                         moduleId={moduleId}
@@ -208,6 +219,7 @@ export default async function LessonPage({ params }: Props) {
                         prevLesson={null}
                         backHref={`/modulos/${moduleId}`}
                         backLabel="Volver al módulo"
+                        isProjectLesson={(lesson.lessonType ?? "standard") === "project"}
                       />
                     )}
                   </div>
@@ -221,6 +233,7 @@ export default async function LessonPage({ params }: Props) {
                     prevLesson={prevLesson}
                     backHref={`/modulos/${moduleId}`}
                     backLabel="Volver al módulo"
+                    isProjectLesson={(lesson.lessonType ?? "standard") === "project"}
                   />
                 }
               />
@@ -232,9 +245,19 @@ export default async function LessonPage({ params }: Props) {
                 <h1 className="mb-2 text-center text-3xl font-bold text-foreground">
                   {lesson.title}
                 </h1>
+                {(lesson.lessonType ?? "standard") === "project" && (
+                  <p className="mb-2 text-center text-sm font-medium text-accent">
+                    Proyecto de fin de módulo
+                  </p>
+                )}
                 <div className="mb-8 h-px bg-border" aria-hidden />
                 <LessonContent content={lesson.content ?? ""} />
               </article>
+              {(lesson.lessonType ?? "standard") === "project" && (
+                <div className="mb-8">
+                  <ProjectSubmissionForm lessonId={lessonId} />
+                </div>
+              )}
               <LessonExercises
                 moduleId={moduleId}
                 lessonId={lessonId}
@@ -243,6 +266,7 @@ export default async function LessonPage({ params }: Props) {
                 prevLesson={prevLesson}
                 backHref={`/modulos/${moduleId}`}
                 backLabel="Volver al módulo"
+                isProjectLesson={(lesson.lessonType ?? "standard") === "project"}
               />
             </div>
           )}

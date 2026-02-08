@@ -26,6 +26,7 @@ model User {
   exerciseAttempts     ExerciseAttempt[]
   certificates         Certificate[]
   testimonials         Testimonial[]
+  projectSubmissions   ProjectSubmission[]
 
   @@map("user")
 }
@@ -83,19 +84,48 @@ model Submodule {
 }
 
 model Lesson {
-  id           String          @id @default(cuid())
-  moduleId     String?
-  submoduleId  String?
-  title        String
-  content      String          @db.LongText
-  order        Int             @default(0)
-  difficulty   DifficultyLevel?
-  createdAt    DateTime        @default(now())
-  module       Module?         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  submodule    Submodule?      @relation(fields: [submoduleId], references: [id], onDelete: Cascade)
-  exercises    Exercise[]
+  id                 String              @id @default(cuid())
+  moduleId          String?
+  submoduleId        String?
+  title             String
+  content           String              @db.LongText
+  order             Int                 @default(0)
+  difficulty        DifficultyLevel?
+  lessonType        String              @default("standard") // "standard" | "project"
+  createdAt         DateTime            @default(now())
+  module            Module?             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  submodule        Submodule?          @relation(fields: [submoduleId], references: [id], onDelete: Cascade)
+  exercises         Exercise[]
+  projectSubmissions ProjectSubmission[]
 
   @@map("lesson")
+}
+
+enum ProjectSubmissionStatus {
+  PENDING
+  APPROVED
+}
+
+enum ProjectSubmissionType {
+  URL
+  FILE
+}
+
+model ProjectSubmission {
+  id              String                  @id @default(cuid())
+  userId          String
+  lessonId        String
+  status         ProjectSubmissionStatus  @default(PENDING)
+  submissionType ProjectSubmissionType
+  url            String?                  @db.VarChar(2000)
+  filePath       String?                 @db.VarChar(500)
+  submittedAt    DateTime                @default(now())
+  approvedAt     DateTime?
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson         Lesson                  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("project_submission")
 }
 
 model Exercise {

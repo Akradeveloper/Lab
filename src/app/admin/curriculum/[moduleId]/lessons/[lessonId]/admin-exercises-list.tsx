@@ -99,7 +99,7 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
     setFormType(
       e.type === "DESARROLLO" ? "DESARROLLO" : e.type === "CODE" ? "CODE" : e.type
     );
-    setFormQuestion(e.question);
+    setFormQuestion(e.question ?? "");
     if (e.type === "CODE") {
       try {
         const opts = JSON.parse(e.options) as {
@@ -139,7 +139,7 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
         setFormCorrectBool(true);
       }
     }
-    setFormOrder(e.order);
+    setFormOrder(typeof e.order === "number" ? e.order : 0);
     setShowForm(true);
   }
 

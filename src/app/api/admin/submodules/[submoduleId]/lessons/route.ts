@@ -35,6 +35,7 @@ export async function GET(_request: Request, { params }: Params) {
     content: l.content,
     order: l.order,
     difficulty: l.difficulty,
+    lessonType: l.lessonType ?? "standard",
     exercisesCount: l._count.exercises,
     createdAt: l.createdAt,
   }));
@@ -57,10 +58,11 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const VALID_DIFFICULTY = ["APRENDIZ", "JUNIOR", "MID", "SENIOR", "ESPECIALISTA"] as const;
+  const VALID_LESSON_TYPE = ["standard", "project"] as const;
 
   try {
     const body = await request.json();
-    const { title, content, order, difficulty } = body;
+    const { title, content, order, difficulty, lessonType } = body;
 
     if (!title || typeof title !== "string" || !title.trim()) {
       return NextResponse.json(
@@ -74,14 +76,20 @@ export async function POST(request: Request, { params }: Params) {
         ? difficulty
         : undefined;
 
+    const lessonTypeValue =
+      lessonType != null && typeof lessonType === "string" && VALID_LESSON_TYPE.includes(lessonType as typeof VALID_LESSON_TYPE[number])
+        ? lessonType
+        : "standard";
+
     const lesson = await prisma.lesson.create({
       data: {
-        submoduleId,
+        submodule: { connect: { id: submoduleId } },
         title: title.trim(),
         content:
           content != null && typeof content === "string" ? content : "",
         order:
           typeof order === "number" && Number.isInteger(order) ? order : 0,
+        lessonType: lessonTypeValue,
         ...(difficultyValue !== undefined && { difficulty: difficultyValue as DifficultyLevel }),
       },
     });

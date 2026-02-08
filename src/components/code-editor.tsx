@@ -52,7 +52,7 @@ export function CodeEditor({
       <MonacoEditor
         height={height}
         language={monacoLang}
-        value={value}
+        value={value ?? ""}
         theme={theme === "dark" ? "vs-dark" : "vs"}
         onChange={(val) => onChange?.(val ?? "")}
         options={{

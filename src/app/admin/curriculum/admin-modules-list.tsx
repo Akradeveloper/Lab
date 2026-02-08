@@ -51,9 +51,9 @@ export function AdminModulesList() {
 
   function openEdit(m: ModuleItem) {
     setEditingId(m.id);
-    setFormTitle(m.title);
+    setFormTitle(m.title ?? "");
     setFormDescription(m.description ?? "");
-    setFormOrder(m.order);
+    setFormOrder(typeof m.order === "number" ? m.order : 0);
     setShowForm(true);
   }
 

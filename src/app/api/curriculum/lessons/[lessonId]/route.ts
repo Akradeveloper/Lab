@@ -75,6 +75,7 @@ export async function GET(_request: Request, { params }: Params) {
     title: lesson.title,
     content: lesson.content,
     order: lesson.order,
+    lessonType: lesson.lessonType ?? "standard",
     exercises,
   });
 }
