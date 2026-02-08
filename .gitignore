@@ -67,6 +67,7 @@ Desktop.ini
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.docker.example
 
 # vercel
 .vercel
