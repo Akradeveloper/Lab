@@ -2,10 +2,9 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
-import { DescriptionMarkdown } from "@/components/description-markdown";
 import { Header } from "@/components/Header";
 import { prisma } from "@/lib/prisma";
-import { ProgressBar } from "@/components/progress-bar";
+import { ModulosFilterList, type ModuleWithStatus } from "@/components/modulos-filter-list";
 
 export const metadata = {
   title: "Módulos - QA Lab",
@@ -44,6 +43,33 @@ export default async function ModulosPage() {
     progress.map((p) => `${p.courseId}:${p.lessonId}`)
   );
 
+  const modulesWithStatus: ModuleWithStatus[] = modules.map((mod) => {
+    const allLessons =
+      mod.submodules.length > 0
+        ? mod.submodules.flatMap((s) => s.lessons)
+        : mod.lessons;
+    const completedCount = allLessons.filter((l) =>
+      completedSet.has(`${mod.id}:${l.id}`)
+    ).length;
+    const totalCount = allLessons.length;
+    const status: ModuleWithStatus["status"] =
+      totalCount === 0
+        ? "not_started"
+        : completedCount === totalCount
+          ? "completed"
+          : completedCount > 0
+            ? "in_progress"
+            : "not_started";
+    return {
+      id: mod.id,
+      title: mod.title,
+      description: mod.description,
+      completedCount,
+      totalCount,
+      status,
+    };
+  });
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -59,46 +85,7 @@ export default async function ModulosPage() {
             Aún no hay módulos disponibles.
           </p>
         ) : (
-          <ul className="space-y-4">
-            {modules.map((mod) => {
-              const allLessons =
-                mod.submodules.length > 0
-                  ? mod.submodules.flatMap((s) => s.lessons)
-                  : mod.lessons;
-              const completedCount = allLessons.filter((l) =>
-                completedSet.has(`${mod.id}:${l.id}`)
-              ).length;
-              const totalCount = allLessons.length;
-              return (
-                <li key={mod.id}>
-                  <Link
-                    href={`/modulos/${mod.id}`}
-                    className="card-hover block rounded-lg border border-border bg-surface p-4 transition-colors hover:border-accent/50 hover:bg-surface/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  >
-                    <h2 className="font-semibold text-foreground">
-                      {mod.title}
-                    </h2>
-                    {mod.description && (
-                      <DescriptionMarkdown
-                        content={mod.description}
-                        className="mt-1 text-sm"
-                      />
-                    )}
-                    <p className="mt-2 text-sm text-accent">
-                      {completedCount}/{totalCount} lecciones completadas
-                    </p>
-                    <div className="mt-2">
-                      <ProgressBar
-                        completed={completedCount}
-                        total={totalCount}
-                        size="sm"
-                      />
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          <ModulosFilterList modules={modulesWithStatus} />
         )}
       </main>
     </div>

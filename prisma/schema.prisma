@@ -25,6 +25,7 @@ model User {
   lessonCheckAttempts  LessonCheckAttempt[]
   exerciseAttempts     ExerciseAttempt[]
   certificates         Certificate[]
+  testimonials         Testimonial[]
 
   @@map("user")
 }
@@ -147,4 +148,16 @@ model Certificate {
 
   @@unique([userId, moduleId])
   @@map("certificate")
+}
+
+model Testimonial {
+  id           String   @id @default(cuid())
+  userId       String
+  text         String   @db.Text
+  roleOrTitle  String?  @db.VarChar(200)
+  approved     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("testimonial")
 }

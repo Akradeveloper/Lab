@@ -4,6 +4,7 @@ import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { Header } from "@/components/Header";
 import { prisma } from "@/lib/prisma";
+import { TestimonialForm } from "@/components/testimonial-form";
 import {
   getProgressByModule,
   type ModuleForProfile,
@@ -248,6 +249,24 @@ export default async function PerfilPage() {
             </ul>
           </section>
         )}
+
+        {/* Deja tu opinión */}
+        <section
+          className="mb-8 rounded-lg border border-border bg-surface p-6"
+          aria-labelledby="perfil-opinion-heading"
+        >
+          <h2
+            id="perfil-opinion-heading"
+            className="mb-4 text-lg font-semibold text-foreground"
+          >
+            Deja tu opinión
+          </h2>
+          <p className="mb-4 text-sm text-muted">
+            Si has completado al menos 5 lecciones, puedes enviar tu opinión para
+            que aparezca en la página de inicio (tras aprobación).
+          </p>
+          <TestimonialForm />
+        </section>
 
         {/* Detalles de cuenta */}
         <section

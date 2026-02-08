@@ -19,23 +19,50 @@ export default async function Home() {
     description: string | null;
     _count: { lessons: number };
   }[] = [];
+  let testimonials: {
+    id: string;
+    userName: string;
+    roleOrTitle: string | null;
+    text: string;
+    createdAt: string;
+  }[] = [];
 
   try {
-    [alumnosCount, lessonsCount, exercisesCount, modules] = await Promise.all([
-      prisma.user.count({ where: { role: "ALUMNO" } }),
-      prisma.lesson.count(),
-      prisma.exercise.count(),
-      prisma.module.findMany({
-        orderBy: { order: "asc" },
-        take: 6,
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          _count: { select: { lessons: true } },
-        },
-      }),
+    const [countsAndModules, approvedTestimonials] = await Promise.all([
+      Promise.all([
+        prisma.user.count({ where: { role: "ALUMNO" } }),
+        prisma.lesson.count(),
+        prisma.exercise.count(),
+        prisma.module.findMany({
+          orderBy: { order: "asc" },
+          take: 6,
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            _count: { select: { lessons: true } },
+          },
+        }),
+      ]),
+      prisma.testimonial
+        .findMany({
+          where: { approved: true },
+          orderBy: { createdAt: "desc" },
+          take: 6,
+          include: { user: { select: { name: true } } },
+        })
+        .then((rows) =>
+          rows.map((t) => ({
+            id: t.id,
+            userName: t.user.name,
+            roleOrTitle: t.roleOrTitle,
+            text: t.text,
+            createdAt: t.createdAt.toISOString(),
+          })),
+        ),
     ]);
+    [alumnosCount, lessonsCount, exercisesCount, modules] = countsAndModules;
+    testimonials = approvedTestimonials;
   } catch {
     // Si la BD no está disponible, la landing se muestra con valores por defecto
   }
@@ -52,7 +79,7 @@ export default async function Home() {
       <FeaturesSection />
       <StatsSection stats={stats} />
       <CurriculumPreview modules={modules} />
-      <TestimonialsSection />
+      <TestimonialsSection testimonials={testimonials} />
       <Footer />
     </div>
   );

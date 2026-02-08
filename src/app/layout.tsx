@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { PwaRegister } from "@/components/pwa-register";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,6 +43,7 @@ export const metadata: Metadata = {
     description:
       "Domina la calidad de software con lecciones interactivas y ejercicios prácticos.",
   },
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
@@ -57,7 +59,10 @@ export default function RootLayout({
         <a href="#main-content" className="skip-link">
           Saltar al contenido
         </a>
-        <Providers>{children}</Providers>
+        <Providers>
+          <PwaRegister />
+          {children}
+        </Providers>
       </body>
     </html>
   );
