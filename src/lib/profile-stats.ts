@@ -1,3 +1,8 @@
+import {
+  getAppConfigJson,
+  DEFAULT_ACHIEVEMENT_MILESTONES,
+} from "@/lib/app-config";
+
 /**
  * Helpers para calcular métricas, progreso por módulo y logros derivados
  * a partir de Progress y la estructura de módulos/lecciones.
@@ -98,12 +103,16 @@ export function getProgressByModule(
   });
 }
 
-const ACHIEVEMENT_MILESTONES = [1, 5, 10, 25, 50] as const;
-
-export function getDerivedAchievements(
+export async function getDerivedAchievements(
   progress: ProgressItem[],
   modules: ModuleForProfile[]
-): DerivedAchievement[] {
+): Promise<DerivedAchievement[]> {
+  const milestones = await getAppConfigJson(
+    "achievement_milestones",
+    DEFAULT_ACHIEVEMENT_MILESTONES
+  );
+  const ACHIEVEMENT_MILESTONES = milestones as number[];
+
   const achievements: DerivedAchievement[] = [];
   const total = progress.length;
 
@@ -119,7 +128,7 @@ export function getDerivedAchievements(
     });
   }
 
-  for (const n of ACHIEVEMENT_MILESTONES) {
+  for (const n of ACHIEVEMENT_MILESTONES as readonly number[]) {
     if (total >= n && n > 1) {
       const byDateAsc = [...progress].sort(
         (a, b) => a.completedAt.getTime() - b.completedAt.getTime()

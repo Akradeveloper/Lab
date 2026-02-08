@@ -12,7 +12,8 @@ export default function AdminPage() {
         Panel de administración
       </h1>
       <p className="mb-8 text-muted">
-        Elige un apartado para gestionar alumnos o el currículo del curso.
+        Elige un apartado para gestionar alumnos, currículo, testimonios o la
+        configuración de la aplicación.
       </p>
 
       <div className="grid gap-6 sm:grid-cols-2">
@@ -56,6 +57,49 @@ export default function AdminPage() {
             className="inline-block rounded border border-accent bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Gestionar currículo
+          </Link>
+        </section>
+
+        <section
+          className="rounded-lg border border-border bg-surface p-6"
+          aria-labelledby="admin-testimonios-heading"
+        >
+          <h2
+            id="admin-testimonios-heading"
+            className="mb-2 text-xl font-semibold text-foreground"
+          >
+            Testimonios
+          </h2>
+          <p className="mb-6 text-muted">
+            Aprobar o revisar testimonios enviados por los alumnos.
+          </p>
+          <Link
+            href="/admin/testimonios"
+            className="inline-block rounded border border-accent bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            Ver testimonios
+          </Link>
+        </section>
+
+        <section
+          className="rounded-lg border border-border bg-surface p-6"
+          aria-labelledby="admin-configuracion-heading"
+        >
+          <h2
+            id="admin-configuracion-heading"
+            className="mb-2 text-xl font-semibold text-foreground"
+          >
+            Configuración
+          </h2>
+          <p className="mb-6 text-muted">
+            Modelo de IA, límites de testimonios, rate limit de registro y
+            logros.
+          </p>
+          <Link
+            href="/admin/configuracion"
+            className="inline-block rounded border border-accent bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            Abrir configuración
           </Link>
         </section>
 

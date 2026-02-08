@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildSuggestLessonsPrompt } from "@/lib/ai-prompts";
+import { getOpenAIModel } from "@/lib/app-config";
 
 type Params = { params: Promise<{ submoduleId: string }> };
 
@@ -60,9 +61,10 @@ export async function GET(_request: Request, { params }: Params) {
       existingLessons,
     });
 
+    const model = await getOpenAIModel();
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
     });

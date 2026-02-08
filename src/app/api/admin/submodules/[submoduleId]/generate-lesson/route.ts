@@ -8,6 +8,11 @@ import {
   buildLessonUserPrompt,
   VALID_DIFFICULTY,
 } from "@/lib/ai-prompts";
+import {
+  getOpenAIModel,
+  getAppConfigNumber,
+  DEFAULT_MAX_PREV_CONTENT_LENGTH,
+} from "@/lib/app-config";
 import type { DifficultyLevel } from "@prisma/client";
 
 type Params = { params: Promise<{ submoduleId: string }> };
@@ -75,19 +80,29 @@ export async function POST(request: Request, { params }: Params) {
       select: { title: true, order: true, content: true },
     });
 
+    const [model, maxPrevContentLength] = await Promise.all([
+      getOpenAIModel(),
+      getAppConfigNumber(
+        "max_prev_content_length",
+        DEFAULT_MAX_PREV_CONTENT_LENGTH
+      ),
+    ]);
     const systemPrompt = buildLessonSystemPrompt();
-    const userPrompt = buildLessonUserPrompt({
-      moduleTitle: submodule.module.title,
-      moduleDescription: submodule.module.description,
-      submoduleTitle: submodule.title,
-      submoduleDescription: submodule.description,
-      existingLessons,
-      topic,
-    });
+    const userPrompt = buildLessonUserPrompt(
+      {
+        moduleTitle: submodule.module.title,
+        moduleDescription: submodule.module.description,
+        submoduleTitle: submodule.title,
+        submoduleDescription: submodule.description,
+        existingLessons,
+        topic,
+      },
+      { maxPrevContentLength }
+    );
 
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

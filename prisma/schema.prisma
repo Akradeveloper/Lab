@@ -161,3 +161,10 @@ model Testimonial {
 
   @@map("testimonial")
 }
+
+model AppConfig {
+  key   String @id
+  value String @db.Text
+
+  @@map("app_config")
+}

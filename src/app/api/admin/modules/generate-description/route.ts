@@ -6,9 +6,9 @@ import {
   buildDescriptionSystemPrompt,
   buildModuleDescriptionUserPrompt,
 } from "@/lib/ai-prompts";
+import { getOpenAIModel } from "@/lib/app-config";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -34,9 +34,10 @@ export async function POST(request: Request) {
       );
     }
 
+    const model = await getOpenAIModel();
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
+      model,
       messages: [
         { role: "system", content: buildDescriptionSystemPrompt() },
         { role: "user", content: buildModuleDescriptionUserPrompt(title) },

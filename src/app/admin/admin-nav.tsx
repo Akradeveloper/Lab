@@ -8,6 +8,7 @@ const links = [
   { href: "/admin/alumnos", label: "Alumnos" },
   { href: "/admin/curriculum", label: "Currículo" },
   { href: "/admin/testimonios", label: "Testimonios" },
+  { href: "/admin/configuracion", label: "Configuración" },
   { href: "/admin/base-de-datos", label: "Base de datos" },
 ] as const;
 

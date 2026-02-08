@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getOpenAIModel } from "@/lib/app-config";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -63,9 +63,10 @@ export async function POST(request: Request) {
 
     if (finalDescription === null && OPENAI_API_KEY?.trim()) {
       try {
+        const model = await getOpenAIModel();
         const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
         const completion = await openai.chat.completions.create({
-          model: OPENAI_MODEL,
+          model,
           messages: [
             {
               role: "system",

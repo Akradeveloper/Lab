@@ -4,6 +4,12 @@ import OpenAI from "openai";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildSuggestExercisesPrompt } from "@/lib/ai-prompts";
+import {
+  getOpenAIModel,
+  getAppConfigNumber,
+  DEFAULT_MAX_PREV_TITLE_LENGTH,
+  DEFAULT_MAX_SUGGEST_CONTENT_LENGTH,
+} from "@/lib/app-config";
 
 type Params = { params: Promise<{ lessonId: string }> };
 
@@ -55,15 +61,30 @@ export async function GET(_request: Request, { params }: Params) {
       select: { title: true, order: true },
     });
 
-    const prompt = buildSuggestExercisesPrompt({
-      lessonTitle: lesson.title,
-      lessonContent: lesson.content,
-      previousLessons,
-    });
+    const [model, maxPrevTitleLength, maxSuggestContentLength] =
+      await Promise.all([
+        getOpenAIModel(),
+        getAppConfigNumber(
+          "max_prev_title_length",
+          DEFAULT_MAX_PREV_TITLE_LENGTH
+        ),
+        getAppConfigNumber(
+          "max_suggest_content_length",
+          DEFAULT_MAX_SUGGEST_CONTENT_LENGTH
+        ),
+      ]);
+    const prompt = buildSuggestExercisesPrompt(
+      {
+        lessonTitle: lesson.title,
+        lessonContent: lesson.content,
+        previousLessons,
+      },
+      { maxPrevTitleLength, maxSuggestContentLength }
+    );
 
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
     });

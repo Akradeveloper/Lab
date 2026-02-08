@@ -97,7 +97,7 @@ export default async function MiCarreraPage() {
     (p) => p.totalCount > 0 && p.completedCount === p.totalCount
   ).length;
   const lastActivity = progress.length > 0 ? progress[0].completedAt : null;
-  const achievements = getDerivedAchievements(progress, modulesForProfile);
+  const achievements = await getDerivedAchievements(progress, modulesForProfile);
   const timeSeriesData = getProgressTimeSeries(progress, {
     lastDays: TIME_SERIES_LAST_DAYS,
   });

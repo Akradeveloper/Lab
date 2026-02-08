@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getOpenAIModel } from "@/lib/app-config";
 
 type Params = { params: Promise<{ lessonId: string }> };
 
@@ -70,6 +71,7 @@ export async function POST(request: Request, { params }: Params) {
       }
     }
 
+    const model = await getOpenAIModel();
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -77,7 +79,7 @@ export async function POST(request: Request, { params }: Params) {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },

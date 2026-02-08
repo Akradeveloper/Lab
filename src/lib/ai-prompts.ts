@@ -32,13 +32,13 @@ export const LANGUAGE_LABELS: Record<string, string> = {
   java: "Java",
 };
 
-/** Máximo de caracteres de contenido previo enviados como contexto. */
+/** Máximo de caracteres de contenido previo enviados como contexto (fallback si no hay config). */
 export const MAX_PREV_CONTENT_LENGTH = 280;
 
-/** Máximo de contenido enviado al sugerir ejercicios. */
+/** Máximo de contenido enviado al sugerir ejercicios (fallback). */
 export const MAX_SUGGEST_CONTENT_LENGTH = 2000;
 
-/** Máximo de caracteres de título de lección anterior en sugerencias. */
+/** Máximo de caracteres de título de lección anterior en sugerencias (fallback). */
 export const MAX_PREV_TITLE_LENGTH = 80;
 
 // ---------------------------------------------------------------------------
@@ -143,16 +143,24 @@ type LessonContext = {
   topic: string;
 };
 
+export type LessonPromptLimits = {
+  maxPrevContentLength?: number;
+};
+
 /**
  * Prompt de usuario para generar una lección.
  * Ya no acepta un lenguaje concreto; los ejemplos siempre son multi-lenguaje.
  */
-export function buildLessonUserPrompt(ctx: LessonContext): string {
+export function buildLessonUserPrompt(
+  ctx: LessonContext,
+  limits?: LessonPromptLimits
+): string {
+  const maxPrev = limits?.maxPrevContentLength ?? MAX_PREV_CONTENT_LENGTH;
   const previousContext = ctx.existingLessons
     .map((l, i) => {
       const summary =
-        l.content.length > MAX_PREV_CONTENT_LENGTH
-          ? l.content.slice(0, MAX_PREV_CONTENT_LENGTH) + "..."
+        l.content.length > maxPrev
+          ? l.content.slice(0, maxPrev) + "..."
           : l.content;
       return `Lección ${i + 1} (orden ${l.order}): "${l.title}". Contenido: ${summary}`;
     })
@@ -318,20 +326,25 @@ type SuggestExercisesContext = {
   previousLessons: Array<{ title: string; order: number }>;
 };
 
+export type SuggestExercisesLimits = {
+  maxPrevTitleLength?: number;
+  maxSuggestContentLength?: number;
+};
+
 export function buildSuggestExercisesPrompt(
   ctx: SuggestExercisesContext,
+  limits?: SuggestExercisesLimits
 ): string {
+  const maxTitle = limits?.maxPrevTitleLength ?? MAX_PREV_TITLE_LENGTH;
+  const maxContent = limits?.maxSuggestContentLength ?? MAX_SUGGEST_CONTENT_LENGTH;
   const previousIndex =
     ctx.previousLessons
-      .map(
-        (l, i) =>
-          `${i + 1}. ${l.title.slice(0, MAX_PREV_TITLE_LENGTH)}`,
-      )
+      .map((l, i) => `${i + 1}. ${l.title.slice(0, maxTitle)}`)
       .join("\n") || "(ninguna)";
 
   const contentSnippet =
-    ctx.lessonContent.length > MAX_SUGGEST_CONTENT_LENGTH
-      ? ctx.lessonContent.slice(0, MAX_SUGGEST_CONTENT_LENGTH) + "..."
+    ctx.lessonContent.length > maxContent
+      ? ctx.lessonContent.slice(0, maxContent) + "..."
       : ctx.lessonContent;
 
   return `Eres un experto en diseño de ejercicios para cursos de QA.

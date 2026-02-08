@@ -2,10 +2,12 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-const MIN_LESSONS = 5;
-const MAX_TEXT_LENGTH = 500;
-const MAX_ROLE_LENGTH = 200;
+import {
+  getAppConfigNumber,
+  DEFAULT_MIN_LESSONS_TESTIMONIAL,
+  DEFAULT_TESTIMONIAL_MAX_TEXT,
+  DEFAULT_TESTIMONIAL_MAX_ROLE_LENGTH,
+} from "@/lib/app-config";
 
 /**
  * POST /api/testimonials/submit
@@ -18,19 +20,31 @@ export async function POST(request: Request) {
   }
 
   try {
+    const [maxTextLength, maxRoleLength, minLessons] = await Promise.all([
+      getAppConfigNumber("testimonial_max_text", DEFAULT_TESTIMONIAL_MAX_TEXT),
+      getAppConfigNumber(
+        "testimonial_max_role_length",
+        DEFAULT_TESTIMONIAL_MAX_ROLE_LENGTH
+      ),
+      getAppConfigNumber(
+        "min_lessons_testimonial",
+        DEFAULT_MIN_LESSONS_TESTIMONIAL
+      ),
+    ]);
+
     const body = await request.json();
     const text = typeof body.text === "string" ? body.text.trim() : "";
     const roleOrTitle =
       typeof body.roleOrTitle === "string"
-        ? body.roleOrTitle.trim().slice(0, MAX_ROLE_LENGTH)
+        ? body.roleOrTitle.trim().slice(0, maxRoleLength)
         : null;
 
-    if (!text || text.length > MAX_TEXT_LENGTH) {
+    if (!text || text.length > maxTextLength) {
       return NextResponse.json(
         {
           error:
-            text.length > MAX_TEXT_LENGTH
-              ? `El texto no puede superar ${MAX_TEXT_LENGTH} caracteres.`
+            text.length > maxTextLength
+              ? `El texto no puede superar ${maxTextLength} caracteres.`
               : "El texto del testimonio es obligatorio.",
         },
         { status: 400 },
@@ -40,9 +54,11 @@ export async function POST(request: Request) {
     const progressCount = await prisma.progress.count({
       where: { userId: session.user.id },
     });
-    if (progressCount < MIN_LESSONS) {
+    if (progressCount < minLessons) {
       return NextResponse.json(
-        { error: "Necesitas completar al menos 5 lecciones para enviar un testimonio." },
+        {
+          error: `Necesitas completar al menos ${minLessons} lecciones para enviar un testimonio.`,
+        },
         { status: 403 },
       );
     }

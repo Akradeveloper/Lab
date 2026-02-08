@@ -9,11 +9,15 @@ import {
   CODE_LANGUAGES,
   VALID_DIFFICULTY,
 } from "@/lib/ai-prompts";
+import {
+  getOpenAIModel,
+  getAppConfigNumber,
+  DEFAULT_EXERCISE_COUNT,
+} from "@/lib/app-config";
 
 type Params = { params: Promise<{ lessonId: string }> };
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const DEFAULT_COUNT = 5;
 
 // ---------------------------------------------------------------------------
 // Tipos y validación de ejercicios generados por la IA
@@ -126,8 +130,12 @@ export async function POST(request: Request, { params }: Params) {
       );
     }
 
+    const defaultCount = await getAppConfigNumber(
+      "default_exercise_count",
+      DEFAULT_EXERCISE_COUNT
+    );
     const ALLOWED_TYPES = ["MULTIPLE_CHOICE", "TRUE_FALSE", "CODE"] as const;
-    let count = DEFAULT_COUNT;
+    let count = defaultCount;
     let allowedTypes: string[] = [...ALLOWED_TYPES];
     let codeLanguage: string | undefined;
     let codeDifficulty: string | undefined;
@@ -188,9 +196,10 @@ export async function POST(request: Request, { params }: Params) {
       codeDifficulty,
     });
 
+    const model = await getOpenAIModel();
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

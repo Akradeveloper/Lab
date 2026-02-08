@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getOpenAIModel } from "@/lib/app-config";
 
 type Params = { params: Promise<{ submoduleId: string }> };
 
@@ -83,9 +84,10 @@ ${lessonsForPrompt
 Responde ÚNICAMENTE con un JSON válido: { "orderedIds": [ "id1", "id2", ... ] }
 El array orderedIds debe contener exactamente los mismos ${lessons.length} IDs que aparecen arriba, en el orden recomendado (más básico primero, más complejo al final).`;
 
+    const model = await getOpenAIModel();
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
     });

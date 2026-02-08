@@ -2,8 +2,10 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-const MIN_LESSONS_COMPLETED = 5;
+import {
+  getAppConfigNumber,
+  DEFAULT_MIN_LESSONS_TESTIMONIAL,
+} from "@/lib/app-config";
 
 /**
  * GET /api/testimonials/can-submit
@@ -32,11 +34,15 @@ export async function GET() {
       });
     }
 
-    if (progressCount < MIN_LESSONS_COMPLETED) {
+    const minLessons = await getAppConfigNumber(
+      "min_lessons_testimonial",
+      DEFAULT_MIN_LESSONS_TESTIMONIAL
+    );
+    if (progressCount < minLessons) {
       return NextResponse.json({
         canSubmit: false,
         reason: "insufficient-progress",
-        required: MIN_LESSONS_COMPLETED,
+        required: minLessons,
         current: progressCount,
       });
     }
