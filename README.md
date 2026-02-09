@@ -44,6 +44,15 @@ Con **MySQL**, el panel **Admin → Base de datos** permite descargar un backup 
 
 En producción (Render, VPS, etc.), programa dumps periódicos o usa las opciones de backup que ofrezca tu proveedor de MySQL.
 
+## Tests y calidad
+
+Los tests están en la carpeta **`tests/`** en la raíz del proyecto (estructura que replica `src/` para localizarlos fácilmente).
+
+- **Ejecutar tests:** `npm test` (modo watch) o `npm run test:run` (una sola vez).
+- **Cobertura:** `npm run test:coverage` (genera el informe en `coverage/` y `coverage/lcov.info` para SonarQube).
+
+El CI (GitHub Actions) ejecuta `npm run lint` y `npm run test:coverage` en cada push y en los PR a `develop`/`master`. Si tienes un servidor **SonarQube**, configura en el repositorio los secrets `SONAR_HOST_URL` (URL del servidor) y `SONAR_TOKEN` (token de análisis). El workflow `.github/workflows/ci.yml` enviará las métricas y la cobertura al analizar. Para ejecutar el scanner en local: instala [SonarScanner](https://docs.sonarqube.org/latest/analyzing-source-code/scanners/sonarscanner/) y ejecuta el análisis con `SONAR_HOST_URL` y `SONAR_TOKEN` en el entorno; el proyecto usa `sonar-project.properties` en la raíz.
+
 ## Documentación
 
 La documentación del proyecto (getting started, arquitectura, contribución) está en **Docusaurus** dentro de la carpeta `website/`:

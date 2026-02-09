@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Subproyecto Docusaurus (config y builds propios)
     "website/**",
+    // Informe de cobertura generado por Vitest
+    "coverage/**",
   ]),
 ]);
 
