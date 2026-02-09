@@ -9,7 +9,7 @@ import { authOptions } from "@/lib/auth";
  */
 export async function getAdminSession(): Promise<Session | null> {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
+  if (session?.user?.role !== "ADMIN") {
     return null;
   }
   return session;
