@@ -1,0 +1,18 @@
+{
+  "name": "QA Lab - Aprende Testing y QA",
+  "short_name": "QA Lab",
+  "description": "Plataforma gratuita para aprender testing y calidad de software.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0c0f",
+  "theme_color": "#22d3ee",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/next.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

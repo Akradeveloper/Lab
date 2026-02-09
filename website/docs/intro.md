@@ -10,9 +10,11 @@
 - **Mi carrera**: métricas, gráficos de actividad y progreso por módulo, listado de avance por módulo y logros derivados.
 - **Perfil**: datos del usuario y resumen de progreso.
 - **Módulos y lecciones**: el alumno navega por módulos (y submódulos si existen), abre lecciones, responde ejercicios y marca la lección como completada (cuando responde correctamente los ejercicios, si los hay).
+- **Lecciones de tipo proyecto**: en algunas lecciones el alumno entrega un proyecto por URL (repositorio, p. ej. GitHub) o subiendo un archivo; el admin puede aprobar o rechazar. Tras un rechazo hay un tiempo de espera (configurable en horas) antes de poder reenviar, y el alumno ve la fecha a partir de la cual puede reenviar.
 - **Ejercicios de código**: soporte para ejercicios tipo CODE con sandbox (por defecto Piston público; opcionalmente Judge0 self-hosted vía variables de entorno).
 - **Admin – currículo**: en cada módulo hay pestañas **Submódulos** y **Lecciones** para elegir qué gestionar; se pueden crear el primer submódulo o lecciones directas del módulo. Crear/editar módulos, submódulos y lecciones (título, contenido, orden, dificultad). “Nueva lección con IA” y “Generar ejercicios con IA” (OpenAI). “Ordenar con IA” para que la IA sugiera un orden de lecciones (de básico a complejo) y aplicar ese orden.
-- **Admin – alumnos**: listado de alumnos y detalle por alumno (progreso, intentos en lecciones y ejercicios).
+- **Admin – Configuración**: en el panel hay un enlace a Configuración con pestañas (IA, Testimonios, Límites, Rate limit, Entregas de proyectos, Logros). Desde ahí se configura, entre otras cosas, el tiempo de espera para reenviar un proyecto tras rechazo.
+- **Admin – alumnos**: listado de alumnos y detalle por alumno (progreso, intentos en lecciones y ejercicios, entregas de proyectos con estado pendiente/rechazado/aprobado). El admin puede aprobar o rechazar cada entrega de proyecto.
 - **Admin – base de datos**: backup (descargar archivo .db) y restauración (subir .db) desde la interfaz.
 - **Base de datos**: SQLite con Prisma (Module, Submodule, Lesson, Exercise, Progress, etc.). Scripts `npm run db:backup` y `npm run db:restore` desde terminal.
 

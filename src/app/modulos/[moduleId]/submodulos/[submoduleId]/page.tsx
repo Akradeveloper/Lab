@@ -6,6 +6,7 @@ import { DescriptionMarkdown } from "@/components/description-markdown";
 import { Header } from "@/components/Header";
 import { getOrderedLessonIdsInModule } from "@/lib/lesson-order";
 import { prisma } from "@/lib/prisma";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 
 type Props = {
   params: Promise<{ moduleId: string; submoduleId: string }>;
@@ -63,21 +64,13 @@ export default async function SubmoduloLessonsPage({
     <div className="min-h-screen bg-background">
       <Header />
       <main id="main-content" className="mx-auto max-w-2xl px-4 py-8">
-        <nav className="mb-6 text-sm text-muted">
-          <Link
-            href="/modulos"
-            className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
-          >
-            ← Módulos
-          </Link>
-          <span className="mx-2">/</span>
-          <Link
-            href={`/modulos/${moduleId}`}
-            className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
-          >
-            {submodule.module.title}
-          </Link>
-        </nav>
+        <Breadcrumbs
+          items={[
+            { label: "Módulos", href: "/modulos" },
+            { label: submodule.module.title, href: `/modulos/${moduleId}` },
+            { label: submodule.title },
+          ]}
+        />
         <h1 className="mb-2 text-2xl font-semibold text-foreground">
           {submodule.title}
         </h1>

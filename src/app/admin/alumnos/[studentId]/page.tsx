@@ -7,6 +7,7 @@ import {
   getProgressByModule,
   type ModuleForProfile,
 } from "@/lib/profile-stats";
+import { AdminProjectSubmissionsTable } from "./admin-project-submissions-table";
 
 type Props = { params: Promise<{ studentId: string }> };
 
@@ -48,7 +49,7 @@ export default async function AdminStudentProgressPage({ params }: Props) {
 
   const { studentId } = await params;
 
-  const [student, progress, modules, lessonCheckAttempts, exerciseAttempts] =
+  const [student, progress, modules, lessonCheckAttempts, exerciseAttempts, projectSubmissions] =
     await Promise.all([
       prisma.user.findUnique({
         where: { id: studentId },
@@ -91,6 +92,15 @@ export default async function AdminStudentProgressPage({ params }: Props) {
         include: {
           exercise: {
             select: { id: true, question: true, order: true, lessonId: true },
+          },
+        },
+      }),
+      prisma.projectSubmission.findMany({
+        where: { userId: studentId },
+        orderBy: { submittedAt: "desc" },
+        include: {
+          lesson: {
+            select: { id: true, title: true },
           },
         },
       }),
@@ -211,6 +221,20 @@ export default async function AdminStudentProgressPage({ params }: Props) {
       );
       return byLesson !== 0 ? byLesson : a.order - b.order;
     });
+
+  const projectSubmissionsList = projectSubmissions.map((s) => {
+    const info = lessonTitleMap.get(s.lesson.id);
+    return {
+      id: s.id,
+      lessonTitle: s.lesson.title,
+      moduleTitle: info?.moduleTitle ?? "—",
+      status: s.status,
+      submissionType: s.submissionType,
+      url: s.url,
+      submittedAt: s.submittedAt.toISOString(),
+      approvedAt: s.approvedAt?.toISOString() ?? null,
+    };
+  });
 
   return (
     <>
@@ -377,6 +401,26 @@ export default async function AdminStudentProgressPage({ params }: Props) {
             </table>
           </div>
         )}
+      </section>
+
+      {/* Entregas de proyectos */}
+      <section
+        className="mb-8 rounded-lg border border-border bg-surface p-6"
+        aria-labelledby="alumno-proyectos-heading"
+      >
+        <h2
+          id="alumno-proyectos-heading"
+          className="mb-4 text-lg font-semibold text-foreground"
+        >
+          Entregas de proyectos
+        </h2>
+        <p className="mb-4 text-sm text-muted">
+          Proyectos entregados por el alumno. Solo el administrador puede
+          aprobar una entrega; al aprobar, la lección se marca como completada.
+        </p>
+        <AdminProjectSubmissionsTable
+          submissions={projectSubmissionsList}
+        />
       </section>
 
       {/* Reintentos por lección */}

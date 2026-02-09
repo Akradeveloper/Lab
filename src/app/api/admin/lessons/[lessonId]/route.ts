@@ -21,10 +21,11 @@ export async function PUT(request: Request, { params }: Params) {
   }
 
   const VALID_DIFFICULTY = ["APRENDIZ", "JUNIOR", "MID", "SENIOR", "ESPECIALISTA"] as const;
+  const VALID_LESSON_TYPE = ["standard", "project"] as const;
 
   try {
     const body = await request.json();
-    const { title, content, order, difficulty } = body;
+    const { title, content, order, difficulty, lessonType } = body;
 
     const data: Prisma.LessonUpdateInput = {};
     if (title !== undefined) {
@@ -56,6 +57,16 @@ export async function PUT(request: Request, { params }: Params) {
       } else {
         return NextResponse.json(
           { error: "Dificultad no válida; usa APRENDIZ, JUNIOR, MID, SENIOR o ESPECIALISTA" },
+          { status: 400 }
+        );
+      }
+    }
+    if (lessonType !== undefined) {
+      if (typeof lessonType === "string" && VALID_LESSON_TYPE.includes(lessonType as typeof VALID_LESSON_TYPE[number])) {
+        data.lessonType = lessonType;
+      } else {
+        return NextResponse.json(
+          { error: "Tipo de lección no válido; usa standard o project" },
           { status: 400 }
         );
       }

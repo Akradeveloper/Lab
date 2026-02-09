@@ -3,12 +3,17 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { buildSuggestExercisesPrompt } from "@/lib/ai-prompts";
+import {
+  getOpenAIModel,
+  getAppConfigNumber,
+  DEFAULT_MAX_PREV_TITLE_LENGTH,
+  DEFAULT_MAX_SUGGEST_CONTENT_LENGTH,
+} from "@/lib/app-config";
 
 type Params = { params: Promise<{ lessonId: string }> };
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const MAX_CONTENT = 2000;
-const MAX_PREV_TITLE = 80;
 
 export async function GET(_request: Request, { params }: Params) {
   const session = await getServerSession(authOptions);
@@ -23,7 +28,7 @@ export async function GET(_request: Request, { params }: Params) {
           "OPENAI_API_KEY no configurada. Añádela en .env para usar las sugerencias.",
         suggestions: [],
       },
-      { status: 503 }
+      { status: 503 },
     );
   }
 
@@ -31,7 +36,7 @@ export async function GET(_request: Request, { params }: Params) {
   if (!lessonId) {
     return NextResponse.json(
       { error: "ID de lección requerido", suggestions: [] },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -43,38 +48,43 @@ export async function GET(_request: Request, { params }: Params) {
     if (!lesson) {
       return NextResponse.json(
         { error: "Lección no encontrada", suggestions: [] },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     const previousLessons = await prisma.lesson.findMany({
-      where: { submoduleId: lesson.submoduleId, order: { lt: lesson.order } },
+      where: {
+        submoduleId: lesson.submoduleId,
+        order: { lt: lesson.order },
+      },
       orderBy: { order: "asc" },
       select: { title: true, order: true },
     });
-    const previousIndex = previousLessons
-      .map((l, i) => `${i + 1}. ${l.title.slice(0, MAX_PREV_TITLE)}`)
-      .join("\n");
-    const contentSnippet =
-      lesson.content.length > MAX_CONTENT
-        ? lesson.content.slice(0, MAX_CONTENT) + "..."
-        : lesson.content;
 
-    const prompt = `Eres un experto en diseño de ejercicios para cursos de QA.
-Índice del módulo (lecciones anteriores a la actual):
-${previousIndex || "(ninguna)"}
-
-Lección actual: "${lesson.title}"
-
-Contenido de la lección:
-${contentSnippet}
-
-Sugiere entre 4 y 6 ideas de ejercicios (pueden ser de tipo test, verdadero/falso o código si el contenido es adecuado). Los ejercicios pueden requerir recordar conceptos de lecciones anteriores.
-Responde ÚNICAMENTE con un JSON válido: { "suggestions": [ { "type": "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CODE", "description": "enunciado o idea breve del ejercicio" }, ... ] }.`;
+    const [model, maxPrevTitleLength, maxSuggestContentLength] =
+      await Promise.all([
+        getOpenAIModel(),
+        getAppConfigNumber(
+          "max_prev_title_length",
+          DEFAULT_MAX_PREV_TITLE_LENGTH
+        ),
+        getAppConfigNumber(
+          "max_suggest_content_length",
+          DEFAULT_MAX_SUGGEST_CONTENT_LENGTH
+        ),
+      ]);
+    const prompt = buildSuggestExercisesPrompt(
+      {
+        lessonTitle: lesson.title,
+        lessonContent: lesson.content,
+        previousLessons,
+      },
+      { maxPrevTitleLength, maxSuggestContentLength }
+    );
 
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
     });
@@ -92,7 +102,10 @@ Responde ÚNICAMENTE con un JSON válido: { "suggestions": [ { "type": "MULTIPLE
         ? parsed.suggestions
             .filter(
               (s) =>
-                s && typeof s === "object" && typeof (s as { description?: unknown }).description === "string"
+                s &&
+                typeof s === "object" &&
+                typeof (s as { description?: unknown }).description ===
+                  "string",
             )
             .map((s) => ({
               type:
@@ -100,7 +113,9 @@ Responde ÚNICAMENTE con un JSON válido: { "suggestions": [ { "type": "MULTIPLE
                 (s as { type?: string }).type === "TRUE_FALSE"
                   ? (s as { type: string }).type
                   : "MULTIPLE_CHOICE",
-              description: (s as { description: string }).description.trim(),
+              description: (
+                s as { description: string }
+              ).description.trim(),
             }))
         : [];
       return NextResponse.json({ suggestions: list });
@@ -113,7 +128,7 @@ Responde ÚNICAMENTE con un JSON válido: { "suggestions": [ { "type": "MULTIPLE
     }
     return NextResponse.json(
       { error: "Error al obtener sugerencias", suggestions: [] },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

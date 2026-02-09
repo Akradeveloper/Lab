@@ -46,7 +46,8 @@
 | `/admin/curriculum/[moduleId]/submodules/[submoduleId]` | Submódulo y sus lecciones |
 | `/admin/curriculum/[moduleId]/submodules/[submoduleId]/lessons/[lessonId]` | Gestión de ejercicios de una lección del submódulo |
 | `/admin/alumnos` | Listado de alumnos |
-| `/admin/alumnos/[studentId]` | Detalle de un alumno (progreso, intentos) |
+| `/admin/alumnos/[studentId]` | Detalle de un alumno (progreso, intentos, entregas de proyectos) |
+| `/admin/configuracion` | Configuración de la aplicación (IA, testimonios, límites, rate limit, entregas de proyectos, logros) |
 | `/admin/base-de-datos` | Backup y restauración de la BD |
 
 ## APIs
@@ -63,6 +64,7 @@
 - `GET /api/curriculum/lessons/[lessonId]`: Contenido y ejercicios de una lección.
 - `POST /api/curriculum/lessons/[lessonId]/check`: Comprobar respuestas de ejercicios (devuelve correcto/incorrecto).
 - `POST /api/curriculum/lessons/[lessonId]/complete`: Marcar lección como completada (registra Progress). Requiere haber respondido correctamente los ejercicios si los hay.
+- Para lecciones de tipo proyecto: `GET /api/curriculum/lessons/[lessonId]/project-submission` (estado de la entrega del usuario); `POST /api/curriculum/lessons/[lessonId]/project-submit` (enviar URL o archivo; si la entrega está rechazada y no han pasado las horas configuradas, devuelve 400 con mensaje y `retryAfter`).
 
 ### Admin (requieren sesión con rol ADMIN)
 
@@ -71,11 +73,15 @@
 - **Submódulos**: `PUT /api/admin/submodules/[submoduleId]`, `DELETE`; `GET/POST /api/admin/submodules/[submoduleId]/lessons`, `PATCH .../lessons/reorder`; `GET suggest-lessons`, `POST suggest-lessons-order`, `POST generate-lesson`.
 - **Lecciones**: `GET/PUT/DELETE /api/admin/lessons/[lessonId]` (incluye campo `difficulty`).
 - **Ejercicios**: `GET/POST /api/admin/lessons/[lessonId]/exercises`, `PUT/DELETE /api/admin/exercises/[id]`; `GET suggest-exercises`, `POST generate-exercises`.
+- **Configuración**: `GET /api/admin/config`, `PATCH /api/admin/config` (body `updates` con claves como `project_submission_cooldown_hours`, etc.).
+- **Entregas de proyectos**: `POST /api/admin/project-submissions/[submissionId]/approve`, `POST /api/admin/project-submissions/[submissionId]/reject`; `GET /api/admin/project-submissions/[submissionId]/download` (descarga de archivo si el tipo es FILE).
 - **Base de datos**: `GET /api/admin/db/backup` (descarga .db), `POST /api/admin/db/restore` (sube .db).
 
 ## Modelo de datos (Prisma)
 
-- **User**: `id`, `email` (único), `passwordHash`, `name`, `role` (enum ALUMNO | ADMIN), `createdAt`. Relaciones: Progress, LessonCheckAttempt, ExerciseAttempt.
+- **User**: `id`, `email` (único), `passwordHash`, `name`, `role` (enum ALUMNO | ADMIN), `createdAt`. Relaciones: Progress, LessonCheckAttempt, ExerciseAttempt, ProjectSubmission.
+- **AppConfig**: tabla `app_config` con `key` (PK) y `value` (texto). Configuración editable desde admin: modelo OpenAI, límites de testimonios, rate limit, **project_submission_cooldown_hours**, logros, etc.
+- **ProjectSubmission**: `id`, `userId`, `lessonId`, `status` (enum PENDING | REJECTED | APPROVED), `submissionType` (URL | FILE), `url`, `filePath`, `submittedAt`, `approvedAt`, `rejectedAt`. Relación con User y Lesson. Una sola entrega por usuario y lección (unique userId + lessonId).
 - **Progress**: `id`, `userId`, `courseId` (identificador del módulo), `lessonId`, `completedAt`. Representa una lección completada por un alumno.
 - **Module**: `id`, `title`, `description`, `order`, `createdAt`. Tiene Submodules y Lessons (lecciones directas del módulo cuando no hay submódulos).
 - **Submodule**: `id`, `moduleId`, `title`, `description`, `order`, `createdAt`. Tiene Lessons.
@@ -84,7 +90,7 @@
 - **LessonCheckAttempt**: `id`, `userId`, `lessonId`, `allCorrect`, `createdAt`. Registro de intento de comprobación de ejercicios de una lección.
 - **ExerciseAttempt**: `id`, `userId`, `exerciseId`, `lessonId`, `correct`, `createdAt`.
 
-Enums: **Role** (ALUMNO, ADMIN), **ExerciseType** (MULTIPLE_CHOICE, TRUE_FALSE, CODE), **DifficultyLevel** (APRENDIZ, JUNIOR, MID, SENIOR, ESPECIALISTA).
+Enums: **Role** (ALUMNO, ADMIN), **ExerciseType** (MULTIPLE_CHOICE, TRUE_FALSE, CODE), **DifficultyLevel** (APRENDIZ, JUNIOR, MID, SENIOR, ESPECIALISTA), **ProjectSubmissionStatus** (PENDING, REJECTED, APPROVED), **ProjectSubmissionType** (URL, FILE).
 
 La base de datos SQLite se encuentra en `prisma/dev.db` (ruta configurada por `DATABASE_URL`).
 

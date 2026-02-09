@@ -1,0 +1,115 @@
+# Normas de creación de contenido educativo
+
+Este archivo documenta las convenciones y normas que se siguen al crear módulos, submódulos, lecciones y ejercicios en QA Lab, tanto con IA como manualmente.
+
+## Jerarquía de contenido
+
+- **Módulo** → contiene **Submódulos** (con lecciones) o **Lecciones directas** (sin submódulos). No mezclar ambos.
+- **Submódulo** → contiene **Lecciones**.
+- **Lección** → contiene **Ejercicios** y tiene contenido teórico en Markdown.
+- **Ejercicio** → pertenece a una lección. Tipos: MULTIPLE_CHOICE, TRUE_FALSE, CODE, DESARROLLO.
+
+## Idioma y tono
+
+- Todo el contenido (UI, teoría, ejercicios, descripciones) se genera en **español**.
+- Tono **formal y didáctico**, sin coloquialismos.
+- Términos técnicos usados con **precisión**.
+
+## Estructura de lecciones (Markdown)
+
+Toda lección debe seguir esta estructura:
+
+1. **Objetivos de aprendizaje**: lista breve (3-5 ítems) al inicio.
+2. **Desarrollo**: secciones con `##` (ej. "Conceptos clave", "Teoría", "Ejemplos"). Párrafos cortos, listas cuando ayude.
+3. **Resumen o Puntos clave**: cierre breve al final.
+
+## Código multi-lenguaje con tabs
+
+Cuando una lección incluye ejemplos de código, se generan **siempre** los 4 lenguajes (JavaScript, Python, TypeScript, Java) dentro de delimitadores HTML:
+
+```markdown
+<!-- code-tabs -->
+```javascript
+// código JavaScript
+```
+```python
+# código Python
+```
+```typescript
+// código TypeScript
+```
+```java
+// código Java
+```
+<!-- /code-tabs -->
+```
+
+### Reglas de los tabs
+
+- Los 4 lenguajes son **obligatorios** en cada grupo de tabs.
+- Si el tema es específico de una herramienta (ej. Jest), mostrar el equivalente en cada lenguaje (Pytest, JUnit, etc.).
+- No generar bloques de código sueltos fuera de `<!-- code-tabs -->` salvo configuración o pseudocódigo.
+- El componente `CodeTabs` renderiza las pestañas y persiste la preferencia del alumno en `localStorage`.
+- El componente usa `highlight.js` para syntax highlighting.
+
+## Descripciones de módulos y submódulos
+
+- Markdown sin `##` (no usar encabezados de nivel 2).
+- Estructura: **Objetivos** (lista 2-4 ítems) → **Contenido** (1-2 frases) → frase de cierre (opcional).
+- Usar **negritas** para etiquetas y listas con guión (`-`).
+
+## Niveles de dificultad
+
+Enum: `APRENDIZ`, `JUNIOR`, `MID`, `SENIOR`, `ESPECIALISTA`.
+
+- **Lecciones**: mantienen el campo `difficulty` como metadata/referencia.
+- **Ejercicios MULTIPLE_CHOICE y TRUE_FALSE**: **sin dificultad** (conocimiento estándar).
+- **Ejercicios CODE**: **con dificultad obligatoria**. Se almacena en `Exercise.difficulty`.
+
+### Descripción de niveles
+
+- **APRENDIZ**: introductorio, sin asumir experiencia previa.
+- **JUNIOR**: conceptos básicos aplicados, ejemplos sencillos.
+- **MID**: asume conocimientos previos, mayor profundidad.
+- **SENIOR**: contenido avanzado, mejores prácticas y casos reales.
+- **ESPECIALISTA**: experto, temas complejos y optimización.
+
+## Tipos de ejercicios y formato JSON
+
+### MULTIPLE_CHOICE
+- `options`: array de 4 strings.
+- `correctAnswer`: índice 0-3 (JSON number).
+- Sin campo `difficulty`.
+
+### TRUE_FALSE
+- `options`: `["Verdadero", "Falso"]`.
+- `correctAnswer`: `true` o `false` (JSON boolean).
+- Sin campo `difficulty`.
+
+### CODE
+- `options`: JSON `{ language, template, testCases }`.
+- `correctAnswer`: código solución (string).
+- `difficulty`: obligatorio (`APRENDIZ` a `ESPECIALISTA`).
+- `testCases`: al menos 1 con `{ input, expectedOutput }`.
+- Lenguajes soportados: `javascript`, `python`, `typescript`, `java`.
+
+### DESARROLLO
+- Parcialmente implementado (placeholder). No se evalúa automáticamente.
+
+## Prompts centralizados
+
+Todos los prompts de IA están en `src/lib/ai-prompts.ts`. Las API routes importan las funciones builder desde ahí. No duplicar prompts en las routes.
+
+### Funciones disponibles
+
+- `buildLessonSystemPrompt()` / `buildLessonUserPrompt(context)`
+- `buildExerciseSystemPrompt()` / `buildExerciseUserPrompt(context)`
+- `buildDescriptionSystemPrompt()` / `buildModuleDescriptionUserPrompt()` / `buildSubmoduleDescriptionUserPrompt()`
+- `buildSuggestLessonsPrompt(context)` / `buildSuggestExercisesPrompt(context)`
+- `difficultyFragment(level)` — fragmento de dificultad para CODE.
+
+## Progresión del contenido
+
+- Cada nueva lección debe ser ligeramente más avanzada que las anteriores.
+- Las sugerencias de lecciones se ordenan por dificultad creciente (3-5 temas).
+- Los ejercicios pueden requerir recordar conceptos de lecciones anteriores.

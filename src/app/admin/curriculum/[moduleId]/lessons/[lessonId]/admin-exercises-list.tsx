@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CodeEditor } from "@/components/code-editor";
 
 type ExerciseItem = {
   id: string;
@@ -40,10 +41,20 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
   const [generateCodeLanguage, setGenerateCodeLanguage] = useState<
     "python" | "javascript" | "java" | "typescript"
   >("javascript");
+  const [generateCodeDifficulty, setGenerateCodeDifficulty] = useState("");
   const [suggestionsEx, setSuggestionsEx] = useState<
     Array<{ type: string; description: string }>
   >([]);
   const [loadingSuggestionsEx, setLoadingSuggestionsEx] = useState(false);
+
+  const DIFFICULTY_OPTIONS = [
+    { value: "", label: "Sin asignar" },
+    { value: "APRENDIZ", label: "Aprendiz" },
+    { value: "JUNIOR", label: "Junior" },
+    { value: "MID", label: "Mid" },
+    { value: "SENIOR", label: "Senior" },
+    { value: "ESPECIALISTA", label: "Especialista" },
+  ];
 
   function loadExercises() {
     setLoading(true);
@@ -88,7 +99,7 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
     setFormType(
       e.type === "DESARROLLO" ? "DESARROLLO" : e.type === "CODE" ? "CODE" : e.type
     );
-    setFormQuestion(e.question);
+    setFormQuestion(e.question ?? "");
     if (e.type === "CODE") {
       try {
         const opts = JSON.parse(e.options) as {
@@ -128,7 +139,7 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
         setFormCorrectBool(true);
       }
     }
-    setFormOrder(e.order);
+    setFormOrder(typeof e.order === "number" ? e.order : 0);
     setShowForm(true);
   }
 
@@ -229,6 +240,9 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
     const body: Record<string, unknown> = { types: generateTypes };
     if (generateTypes.includes("CODE")) {
       body.codeLanguage = generateCodeLanguage;
+      if (generateCodeDifficulty.trim()) {
+        body.codeDifficulty = generateCodeDifficulty.trim();
+      }
     }
     fetch(`/api/admin/lessons/${lessonId}/generate-exercises`, {
       method: "POST",
@@ -333,30 +347,48 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
             </label>
           </div>
           {generateTypes.includes("CODE") && (
-            <div className="mt-2">
-              <span className="text-sm font-medium text-foreground">
-                Lenguaje para ejercicios de código
-              </span>
-              <select
-                value={generateCodeLanguage}
-                onChange={(e) =>
-                  setGenerateCodeLanguage(
-                    e.target.value as
-                      | "python"
-                      | "javascript"
-                      | "java"
-                      | "typescript"
-                  )
-                }
-                className="mt-1 block rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-              >
-                {GENERATE_CODE_LANGUAGES.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <>
+              <div className="mt-2">
+                <span className="text-sm font-medium text-foreground">
+                  Lenguaje para ejercicios de código
+                </span>
+                <select
+                  value={generateCodeLanguage}
+                  onChange={(e) =>
+                    setGenerateCodeLanguage(
+                      e.target.value as
+                        | "python"
+                        | "javascript"
+                        | "java"
+                        | "typescript"
+                    )
+                  }
+                  className="mt-1 block rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                >
+                  {GENERATE_CODE_LANGUAGES.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="mt-2">
+                <span className="text-sm font-medium text-foreground">
+                  Dificultad de los ejercicios de código
+                </span>
+                <select
+                  value={generateCodeDifficulty}
+                  onChange={(e) => setGenerateCodeDifficulty(e.target.value)}
+                  className="mt-1 block rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                >
+                  {DIFFICULTY_OPTIONS.map((opt) => (
+                    <option key={opt.value || "empty"} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
           )}
         </div>
         <div className="flex flex-wrap justify-end gap-2">
@@ -487,32 +519,28 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
                     ))}
                   </select>
                 </label>
-                <label className="block">
-                  <span className="text-sm font-medium text-foreground">
+                <div className="block">
+                  <span className="mb-1 block text-sm font-medium text-foreground">
                     Código inicial (plantilla)
                   </span>
-                  <textarea
+                  <CodeEditor
+                    language={formCodeLanguage}
                     value={formCodeTemplate}
-                    onChange={(e) => setFormCodeTemplate(e.target.value)}
-                    spellCheck={false}
-                    rows={8}
-                    className="mt-1 w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-                    placeholder="Código que verá el alumno para completar o corregir"
+                    onChange={(val) => setFormCodeTemplate(val)}
+                    height="200px"
                   />
-                </label>
-                <label className="block">
-                  <span className="text-sm font-medium text-foreground">
+                </div>
+                <div className="block">
+                  <span className="mb-1 block text-sm font-medium text-foreground">
                     Solución (código correcto)
                   </span>
-                  <textarea
+                  <CodeEditor
+                    language={formCodeLanguage}
                     value={formCodeSolution}
-                    onChange={(e) => setFormCodeSolution(e.target.value)}
-                    spellCheck={false}
-                    rows={8}
-                    className="mt-1 w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-                    placeholder="Código exacto con el que se comparará la respuesta"
+                    onChange={(val) => setFormCodeSolution(val)}
+                    height="200px"
                   />
-                </label>
+                </div>
               </>
             )}
             {formType === "MULTIPLE_CHOICE" && (

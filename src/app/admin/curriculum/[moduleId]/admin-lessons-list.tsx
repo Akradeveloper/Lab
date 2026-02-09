@@ -26,6 +26,7 @@ type LessonItem = {
   content: string;
   order: number;
   difficulty?: string | null;
+  lessonType?: string | null;
   exercisesCount: number;
   createdAt: string;
 };
@@ -54,7 +55,9 @@ export function AdminLessonsList({
   const [formContent, setFormContent] = useState("");
   const [formOrder, setFormOrder] = useState(0);
   const [formDifficulty, setFormDifficulty] = useState("");
+  const [formLessonType, setFormLessonType] = useState<"standard" | "project">("standard");
   const [saving, setSaving] = useState(false);
+  const [generatingProject, setGeneratingProject] = useState(false);
   const [showAIGenerate, setShowAIGenerate] = useState(false);
   const [aiDifficulty, setAiDifficulty] = useState("");
   const [aiTopic, setAiTopic] = useState("");
@@ -98,16 +101,37 @@ export function AdminLessonsList({
     setFormContent("");
     setFormOrder(lessons.length);
     setFormDifficulty("");
+    setFormLessonType("standard");
     setShowForm(true);
   }
 
   function openEdit(l: LessonItem) {
     setEditingId(l.id);
-    setFormTitle(l.title);
-    setFormContent(l.content);
-    setFormOrder(l.order);
+    setFormTitle(l.title ?? "");
+    setFormContent(l.content ?? "");
+    setFormOrder(typeof l.order === "number" ? l.order : 0);
     setFormDifficulty(l.difficulty ?? "");
+    setFormLessonType((l.lessonType === "project" ? "project" : "standard") as "standard" | "project");
     setShowForm(true);
+  }
+
+  function handleGenerateProject() {
+    const url = flatMode(submoduleId)
+      ? `/api/admin/modules/${moduleId}/generate-project`
+      : `/api/admin/submodules/${submoduleId}/generate-project`;
+    setError("");
+    setGeneratingProject(true);
+    fetch(url, { method: "POST", credentials: "include" })
+      .then((res) => {
+        if (!res.ok) return res.json().then((d) => Promise.reject(d));
+        return res.json();
+      })
+      .then((data: { title?: string; content?: string }) => {
+        if (typeof data.title === "string") setFormTitle(data.title);
+        if (typeof data.content === "string") setFormContent(data.content);
+      })
+      .catch((err) => setError(err?.error ?? "Error al generar el proyecto"))
+      .finally(() => setGeneratingProject(false));
   }
 
   function closeForm() {
@@ -174,9 +198,6 @@ export function AdminLessonsList({
       topic,
       difficulty: aiDifficulty.trim() || undefined,
     };
-    if (aiAlsoExercises && aiExerciseTypes.includes("CODE")) {
-      lessonBody.language = aiCodeLanguage;
-    }
     fetch(generateUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -193,6 +214,9 @@ export function AdminLessonsList({
           };
           if (aiExerciseTypes.includes("CODE")) {
             exercisesBody.codeLanguage = aiCodeLanguage;
+            if (aiDifficulty.trim()) {
+              exercisesBody.codeDifficulty = aiDifficulty.trim();
+            }
           }
           return fetch(`/api/admin/lessons/${lesson.id}/generate-exercises`, {
             method: "POST",
@@ -221,6 +245,7 @@ export function AdminLessonsList({
       content: formContent,
       order: formOrder,
       difficulty: formDifficulty === "" ? null : formDifficulty,
+      lessonType: formLessonType,
     };
     const url = editingId ? `/api/admin/lessons/${editingId}` : lessonsUrl;
     const method = editingId ? "PUT" : "POST";
@@ -481,30 +506,48 @@ export function AdminLessonsList({
                   </label>
                 </div>
                 {aiExerciseTypes.includes("CODE") && (
-                  <div className="mt-2">
-                    <span className="text-sm font-medium text-foreground">
-                      Lenguaje para teoría, ejemplos y ejercicios de código
-                    </span>
-                    <select
-                      value={aiCodeLanguage}
-                      onChange={(e) =>
-                        setAiCodeLanguage(
-                          e.target.value as
-                            | "python"
-                            | "javascript"
-                            | "java"
-                            | "typescript"
-                        )
-                      }
-                      className="mt-1 block rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-                    >
-                      {AI_CODE_LANGUAGES.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <>
+                    <div className="mt-2">
+                      <span className="text-sm font-medium text-foreground">
+                        Lenguaje para ejercicios de código
+                      </span>
+                      <select
+                        value={aiCodeLanguage}
+                        onChange={(e) =>
+                          setAiCodeLanguage(
+                            e.target.value as
+                              | "python"
+                              | "javascript"
+                              | "java"
+                              | "typescript"
+                          )
+                        }
+                        className="mt-1 block rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                      >
+                        {AI_CODE_LANGUAGES.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-sm font-medium text-foreground">
+                        Dificultad de los ejercicios de código
+                      </span>
+                      <select
+                        value={aiDifficulty}
+                        onChange={(e) => setAiDifficulty(e.target.value)}
+                        className="mt-1 block rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                      >
+                        {DIFFICULTY_OPTIONS.map((opt) => (
+                          <option key={opt.value || "empty"} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -615,6 +658,39 @@ export function AdminLessonsList({
                 ))}
               </select>
             </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={formLessonType === "project"}
+                onChange={(e) =>
+                  setFormLessonType(e.target.checked ? "project" : "standard")
+                }
+                className="rounded border-border text-accent focus:ring-accent"
+              />
+              <span className="text-sm text-foreground">Es un proyecto</span>
+            </label>
+            {formLessonType === "project" && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleGenerateProject}
+                  disabled={generatingProject || lessons.length === 0}
+                  title={
+                    lessons.length === 0
+                      ? "Añade al menos una lección antes para generar el proyecto a partir de su contenido."
+                      : undefined
+                  }
+                  className="rounded border border-accent bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {generatingProject ? "Generando…" : "Generar proyecto con IA"}
+                </button>
+                {lessons.length === 0 && (
+                  <span className="text-sm text-muted">
+                    Añade al menos una lección para poder generar.
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <div className="mt-4 flex gap-2">
             <button
@@ -658,7 +734,14 @@ export function AdminLessonsList({
                   key={l.id}
                   className="border-b border-border transition-colors hover:bg-surface/50"
                 >
-                  <td className="p-3 text-foreground">{l.title}</td>
+                  <td className="p-3 text-foreground">
+                    <span>{l.title}</span>
+                    {(l.lessonType ?? "standard") === "project" && (
+                      <span className="ml-2 rounded border border-accent bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                        Proyecto
+                      </span>
+                    )}
+                  </td>
                   <td className="p-3">
                     {l.difficulty ? (
                       <span className="rounded border border-border bg-surface px-2 py-0.5 text-xs font-medium text-foreground">

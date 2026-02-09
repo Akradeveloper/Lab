@@ -3,9 +3,13 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  buildDescriptionSystemPrompt,
+  buildSubmoduleDescriptionUserPrompt,
+} from "@/lib/ai-prompts";
+import { getOpenAIModel } from "@/lib/app-config";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
 
 type Params = { params: Promise<{ moduleId: string }> };
 
@@ -18,7 +22,7 @@ export async function POST(request: Request, { params }: Params) {
   if (!OPENAI_API_KEY?.trim()) {
     return NextResponse.json(
       { error: "Generación con IA no configurada" },
-      { status: 503 }
+      { status: 503 },
     );
   }
 
@@ -26,7 +30,7 @@ export async function POST(request: Request, { params }: Params) {
   if (!moduleId) {
     return NextResponse.json(
       { error: "ID de módulo requerido" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -36,7 +40,7 @@ export async function POST(request: Request, { params }: Params) {
   if (!module_) {
     return NextResponse.json(
       { error: "Módulo no encontrado" },
-      { status: 404 }
+      { status: 404 },
     );
   }
 
@@ -47,22 +51,22 @@ export async function POST(request: Request, { params }: Params) {
     if (!title || typeof title !== "string" || !title.trim()) {
       return NextResponse.json(
         { error: "El título es obligatorio" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
+    const model = await getOpenAIModel();
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
+      model,
       messages: [
-        {
-          role: "system",
-          content:
-            "Eres un creador de contenido para un curso profesional de QA (Quality Assurance / testing). Respondes en español con tono formal y didáctico, sin coloquialismos y con términos técnicos precisos.\n\nLa descripción debe tener estructura en Markdown, sin usar ## (no uses encabezados de nivel 2). Usa **negritas** para las etiquetas y listas con guión (-).\n- **Objetivos** (o \"Qué aprenderás\"): lista con 2-4 ítems usando guiones (-).\n- **Contenido**: 1-2 frases que presenten el módulo/submódulo y su relevancia en QA.\n- Opcional: una frase de cierre.\n\nResponde únicamente con el Markdown de la descripción, sin JSON ni texto extra.",
-        },
+        { role: "system", content: buildDescriptionSystemPrompt() },
         {
           role: "user",
-          content: `Genera la descripción para el siguiente submódulo de un curso de QA. Módulo: "${module_.title}". Submódulo: "${title.trim()}". Sigue la estructura indicada (Objetivos con lista, Contenido breve, cierre opcional).`,
+          content: buildSubmoduleDescriptionUserPrompt(
+            module_.title,
+            title,
+          ),
         },
       ],
     });
@@ -70,17 +74,20 @@ export async function POST(request: Request, { params }: Params) {
     if (!description) {
       return NextResponse.json(
         { error: "No se pudo generar la descripción" },
-        { status: 502 }
+        { status: 502 },
       );
     }
     return NextResponse.json({ description });
   } catch (e) {
     if (process.env.NODE_ENV !== "production") {
-      console.error("Error al generar descripción del submódulo con IA:", e);
+      console.error(
+        "Error al generar descripción del submódulo con IA:",
+        e,
+      );
     }
     return NextResponse.json(
       { error: "Error al generar la descripción con IA" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

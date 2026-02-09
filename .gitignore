@@ -24,6 +24,9 @@
 # backups (no versionar copias de la BD)
 backups/
 
+# entregas de proyectos (archivos subidos por alumnos)
+uploads/
+
 # databases (SQLite)
 *.db
 prisma/dev.db

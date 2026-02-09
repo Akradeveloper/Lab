@@ -54,9 +54,9 @@ export function AdminSubmodulesList({ moduleId, moduleTitle }: Props) {
 
   function openEdit(s: SubmoduleItem) {
     setEditingId(s.id);
-    setFormTitle(s.title);
+    setFormTitle(s.title ?? "");
     setFormDescription(s.description ?? "");
-    setFormOrder(s.order);
+    setFormOrder(typeof s.order === "number" ? s.order : 0);
     setShowForm(true);
   }
 

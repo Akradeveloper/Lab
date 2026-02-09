@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { buildSuggestLessonsPrompt } from "@/lib/ai-prompts";
+import { getOpenAIModel } from "@/lib/app-config";
 
 type Params = { params: Promise<{ moduleId: string }> };
 
@@ -21,7 +23,7 @@ export async function GET(_request: Request, { params }: Params) {
           "OPENAI_API_KEY no configurada. Añádela en .env para usar las sugerencias.",
         suggestions: [],
       },
-      { status: 503 }
+      { status: 503 },
     );
   }
 
@@ -29,7 +31,7 @@ export async function GET(_request: Request, { params }: Params) {
   if (!moduleId) {
     return NextResponse.json(
       { error: "ID de módulo requerido", suggestions: [] },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -41,13 +43,17 @@ export async function GET(_request: Request, { params }: Params) {
     if (!module_) {
       return NextResponse.json(
         { error: "Módulo no encontrado", suggestions: [] },
-        { status: 404 }
+        { status: 404 },
       );
     }
     if (module_._count.submodules > 0) {
       return NextResponse.json(
-        { error: "Este módulo tiene submódulos; usa las sugerencias desde un submódulo.", suggestions: [] },
-        { status: 400 }
+        {
+          error:
+            "Este módulo tiene submódulos; usa las sugerencias desde un submódulo.",
+          suggestions: [],
+        },
+        { status: 400 },
       );
     }
 
@@ -57,22 +63,16 @@ export async function GET(_request: Request, { params }: Params) {
       select: { title: true, order: true },
     });
 
-    const lessonsList = existingLessons
-      .map((l, i) => `${i + 1}. ${l.title}`)
-      .join("\n");
+    const prompt = buildSuggestLessonsPrompt({
+      moduleTitle: module_.title,
+      moduleDescription: module_.description,
+      existingLessons,
+    });
 
-    const prompt = `Eres un experto en diseño de currículo para cursos de QA (Quality Assurance / testing).
-Módulo: "${module_.title}".
-${module_.description ? `Descripción del módulo: ${module_.description}\n` : ""}
-Lecciones ya creadas en este módulo (no repitas estos temas):
-${lessonsList || "(ninguna todavía)"}
-
-Sugiere entre 3 y 5 temas concretos para las siguientes lecciones, sin repetir los existentes, en orden de dificultad creciente.
-Responde ÚNICAMENTE con un JSON válido: { "suggestions": [ "tema 1", "tema 2", ... ] }.`;
-
+    const model = await getOpenAIModel();
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
     });
@@ -85,7 +85,9 @@ Responde ÚNICAMENTE con un JSON válido: { "suggestions": [ "tema 1", "tema 2",
     try {
       const parsed = JSON.parse(raw) as { suggestions?: unknown[] };
       const list = Array.isArray(parsed.suggestions)
-        ? parsed.suggestions.filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+        ? parsed.suggestions.filter(
+            (s): s is string => typeof s === "string" && s.trim().length > 0,
+          )
         : [];
       return NextResponse.json({ suggestions: list });
     } catch {
@@ -97,7 +99,7 @@ Responde ÚNICAMENTE con un JSON válido: { "suggestions": [ "tema 1", "tema 2",
     }
     return NextResponse.json(
       { error: "Error al obtener sugerencias", suggestions: [] },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

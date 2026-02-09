@@ -24,6 +24,9 @@ model User {
   progress             Progress[]
   lessonCheckAttempts  LessonCheckAttempt[]
   exerciseAttempts     ExerciseAttempt[]
+  certificates         Certificate[]
+  testimonials         Testimonial[]
+  projectSubmissions   ProjectSubmission[]
 
   @@map("user")
 }
@@ -55,13 +58,14 @@ enum DifficultyLevel {
 }
 
 model Module {
-  id          String      @id @default(cuid())
-  title       String
-  description String?     @db.Text
-  order       Int         @default(0)
-  createdAt   DateTime    @default(now())
-  submodules  Submodule[]
-  lessons     Lesson[]
+  id           String        @id @default(cuid())
+  title        String
+  description  String?       @db.Text
+  order        Int           @default(0)
+  createdAt    DateTime      @default(now())
+  submodules   Submodule[]
+  lessons      Lesson[]
+  certificates Certificate[]
 
   @@map("module")
 }
@@ -80,19 +84,50 @@ model Submodule {
 }
 
 model Lesson {
-  id           String          @id @default(cuid())
-  moduleId     String?
-  submoduleId  String?
-  title        String
-  content      String          @default("") @db.LongText
-  order        Int             @default(0)
-  difficulty   DifficultyLevel?
-  createdAt    DateTime        @default(now())
-  module       Module?         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  submodule    Submodule?      @relation(fields: [submoduleId], references: [id], onDelete: Cascade)
-  exercises    Exercise[]
+  id                 String              @id @default(cuid())
+  moduleId          String?
+  submoduleId        String?
+  title             String
+  content           String              @db.LongText
+  order             Int                 @default(0)
+  difficulty        DifficultyLevel?
+  lessonType        String              @default("standard") // "standard" | "project"
+  createdAt         DateTime            @default(now())
+  module            Module?             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  submodule        Submodule?          @relation(fields: [submoduleId], references: [id], onDelete: Cascade)
+  exercises         Exercise[]
+  projectSubmissions ProjectSubmission[]
 
   @@map("lesson")
+}
+
+enum ProjectSubmissionStatus {
+  PENDING
+  REJECTED
+  APPROVED
+}
+
+enum ProjectSubmissionType {
+  URL
+  FILE
+}
+
+model ProjectSubmission {
+  id              String                  @id @default(cuid())
+  userId          String
+  lessonId        String
+  status         ProjectSubmissionStatus  @default(PENDING)
+  submissionType ProjectSubmissionType
+  url            String?                  @db.VarChar(2000)
+  filePath       String?                 @db.VarChar(500)
+  submittedAt    DateTime                @default(now())
+  approvedAt     DateTime?
+  rejectedAt     DateTime?
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson         Lesson                  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("project_submission")
 }
 
 model Exercise {
@@ -102,6 +137,7 @@ model Exercise {
   question        String            @db.LongText
   options         String            @db.LongText  // JSON: MULTIPLE_CHOICE/TRUE_FALSE = array of options; CODE = { language, template, testCases }
   correctAnswer   String            @db.LongText  // JSON: MULTIPLE_CHOICE = index (number), TRUE_FALSE = boolean, CODE = "" or reserved
+  difficulty      DifficultyLevel?                 // Solo aplica a ejercicios de tipo CODE
   order           Int               @default(0)
   createdAt       DateTime          @default(now())
   lesson          Lesson            @relation(fields: [lessonId], references: [id], onDelete: Cascade)
@@ -132,4 +168,35 @@ model ExerciseAttempt {
   exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
   @@map("exerciseattempt")
+}
+
+model Certificate {
+  id          String   @id @default(cuid())
+  userId      String
+  moduleId    String
+  issuedAt    DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId])
+  @@map("certificate")
+}
+
+model Testimonial {
+  id           String   @id @default(cuid())
+  userId       String
+  text         String   @db.Text
+  roleOrTitle  String?  @db.VarChar(200)
+  approved     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("testimonial")
+}
+
+model AppConfig {
+  key   String @id
+  value String @db.Text
+
+  @@map("app_config")
 }

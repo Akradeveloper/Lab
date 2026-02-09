@@ -4,6 +4,7 @@ import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { Header } from "@/components/Header";
 import { prisma } from "@/lib/prisma";
+import { TestimonialForm } from "@/components/testimonial-form";
 import {
   getProgressByModule,
   type ModuleForProfile,
@@ -54,7 +55,7 @@ export default async function PerfilPage() {
 
   const userId = session.user.id;
 
-  const [user, progress, modules] = await Promise.all([
+  const [user, progress, modules, certificates] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -84,6 +85,11 @@ export default async function PerfilPage() {
           select: { id: true },
         },
       },
+    }),
+    prisma.certificate.findMany({
+      where: { userId },
+      orderBy: { issuedAt: "desc" },
+      include: { module: { select: { title: true } } },
     }),
   ]);
 
@@ -207,6 +213,59 @@ export default async function PerfilPage() {
           >
             Ver mi carrera
           </Link>
+        </section>
+
+        {/* Certificados */}
+        {certificates.length > 0 && (
+          <section
+            className="mb-8 rounded-lg border border-border bg-surface p-6"
+            aria-labelledby="perfil-certificados-heading"
+          >
+            <h2
+              id="perfil-certificados-heading"
+              className="mb-4 text-lg font-semibold text-foreground"
+            >
+              Certificados
+            </h2>
+            <ul className="space-y-3">
+              {certificates.map((cert) => (
+                <li key={cert.id} className="flex items-center justify-between rounded border border-border bg-background p-3">
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {cert.module.title}
+                    </p>
+                    <p className="text-xs text-muted">
+                      Emitido el {formatDate(cert.issuedAt)}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/certificados/${cert.id}`}
+                    className="rounded border border-accent bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+                  >
+                    Ver
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/* Deja tu opinión */}
+        <section
+          className="mb-8 rounded-lg border border-border bg-surface p-6"
+          aria-labelledby="perfil-opinion-heading"
+        >
+          <h2
+            id="perfil-opinion-heading"
+            className="mb-4 text-lg font-semibold text-foreground"
+          >
+            Deja tu opinión
+          </h2>
+          <p className="mb-4 text-sm text-muted">
+            Si has completado al menos 5 lecciones, puedes enviar tu opinión para
+            que aparezca en la página de inicio (tras aprobación).
+          </p>
+          <TestimonialForm />
         </section>
 
         {/* Detalles de cuenta */}

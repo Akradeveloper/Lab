@@ -5,7 +5,7 @@ import { checkRegisterRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
-    const rateLimitError = checkRegisterRateLimit(request);
+    const rateLimitError = await checkRegisterRateLimit(request);
     if (rateLimitError) {
       return NextResponse.json({ error: rateLimitError }, { status: 429 });
     }

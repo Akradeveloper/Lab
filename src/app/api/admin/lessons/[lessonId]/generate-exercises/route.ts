@@ -3,12 +3,25 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  buildExerciseSystemPrompt,
+  buildExerciseUserPrompt,
+  CODE_LANGUAGES,
+  VALID_DIFFICULTY,
+} from "@/lib/ai-prompts";
+import {
+  getOpenAIModel,
+  getAppConfigNumber,
+  DEFAULT_EXERCISE_COUNT,
+} from "@/lib/app-config";
 
 type Params = { params: Promise<{ lessonId: string }> };
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const DEFAULT_COUNT = 5;
-const CODE_LANGUAGES = ["javascript", "python", "typescript", "java"] as const;
+
+// ---------------------------------------------------------------------------
+// Tipos y validación de ejercicios generados por la IA
+// ---------------------------------------------------------------------------
 
 type GeneratedExerciseMcTf = {
   type: "MULTIPLE_CHOICE" | "TRUE_FALSE";
@@ -24,19 +37,32 @@ type GeneratedExerciseCode = {
   template: string;
   solution?: string;
   testCases: Array<{ input: string; expectedOutput: string }>;
+  difficulty?: string;
 };
 
 type GeneratedExercise = GeneratedExerciseMcTf | GeneratedExerciseCode;
 
-function isCodeExercise(o: Record<string, unknown>): o is GeneratedExerciseCode {
+function isCodeExercise(
+  o: Record<string, unknown>,
+): o is GeneratedExerciseCode {
   if (o.type !== "CODE") return false;
   if (typeof o.question !== "string" || !o.question.trim()) return false;
   const lang = o.language;
-  if (typeof lang !== "string" || !CODE_LANGUAGES.includes(lang as (typeof CODE_LANGUAGES)[number])) return false;
+  if (
+    typeof lang !== "string" ||
+    !CODE_LANGUAGES.includes(lang as (typeof CODE_LANGUAGES)[number])
+  )
+    return false;
   if (typeof o.template !== "string") return false;
   if (!Array.isArray(o.testCases) || o.testCases.length === 0) return false;
   for (const tc of o.testCases) {
-    if (!tc || typeof tc !== "object" || typeof (tc as { input?: unknown }).input !== "string" || typeof (tc as { expectedOutput?: unknown }).expectedOutput !== "string") return false;
+    if (
+      !tc ||
+      typeof tc !== "object" ||
+      typeof (tc as { input?: unknown }).input !== "string" ||
+      typeof (tc as { expectedOutput?: unknown }).expectedOutput !== "string"
+    )
+      return false;
   }
   return true;
 }
@@ -51,12 +77,22 @@ function isValidGenerated(ex: unknown): ex is GeneratedExercise {
     if (!Array.isArray(o.options) || o.options.length < 2) return false;
     if (!o.options.every((x: unknown) => typeof x === "string")) return false;
     const idx = o.correctAnswer;
-    if (typeof idx !== "number" || !Number.isInteger(idx) || idx < 0 || idx >= o.options.length) return false;
+    if (
+      typeof idx !== "number" ||
+      !Number.isInteger(idx) ||
+      idx < 0 ||
+      idx >= o.options.length
+    )
+      return false;
   } else {
     if (typeof o.correctAnswer !== "boolean") return false;
   }
   return true;
 }
+
+// ---------------------------------------------------------------------------
+// Handler
+// ---------------------------------------------------------------------------
 
 export async function POST(request: Request, { params }: Params) {
   const session = await getServerSession(authOptions);
@@ -70,7 +106,7 @@ export async function POST(request: Request, { params }: Params) {
         error:
           "OPENAI_API_KEY no configurada. Añádela en .env para usar la generación con IA.",
       },
-      { status: 503 }
+      { status: 503 },
     );
   }
 
@@ -78,7 +114,7 @@ export async function POST(request: Request, { params }: Params) {
   if (!lessonId) {
     return NextResponse.json(
       { error: "ID de lección requerido" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -90,22 +126,40 @@ export async function POST(request: Request, { params }: Params) {
     if (!lesson) {
       return NextResponse.json(
         { error: "Lección no encontrada" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
+    const defaultCount = await getAppConfigNumber(
+      "default_exercise_count",
+      DEFAULT_EXERCISE_COUNT
+    );
     const ALLOWED_TYPES = ["MULTIPLE_CHOICE", "TRUE_FALSE", "CODE"] as const;
-    let count = DEFAULT_COUNT;
+    let count = defaultCount;
     let allowedTypes: string[] = [...ALLOWED_TYPES];
     let codeLanguage: string | undefined;
+    let codeDifficulty: string | undefined;
+
     try {
       const body = await request.json();
-      if (body != null && typeof body.count === "number" && Number.isInteger(body.count) && body.count >= 1 && body.count <= 15) {
+      if (
+        body != null &&
+        typeof body.count === "number" &&
+        Number.isInteger(body.count) &&
+        body.count >= 1 &&
+        body.count <= 15
+      ) {
         count = body.count;
       }
-      if (body != null && Array.isArray(body.types) && body.types.length > 0) {
-        const filtered = body.types.filter((t: unknown) =>
-          typeof t === "string" && ALLOWED_TYPES.includes(t as (typeof ALLOWED_TYPES)[number])
+      if (
+        body != null &&
+        Array.isArray(body.types) &&
+        body.types.length > 0
+      ) {
+        const filtered = body.types.filter(
+          (t: unknown) =>
+            typeof t === "string" &&
+            ALLOWED_TYPES.includes(t as (typeof ALLOWED_TYPES)[number]),
         );
         if (filtered.length > 0) allowedTypes = filtered;
       }
@@ -116,36 +170,36 @@ export async function POST(request: Request, { params }: Params) {
       ) {
         codeLanguage = body.codeLanguage;
       }
+      if (
+        body != null &&
+        typeof body.codeDifficulty === "string" &&
+        VALID_DIFFICULTY.includes(
+          body.codeDifficulty as (typeof VALID_DIFFICULTY)[number],
+        )
+      ) {
+        codeDifficulty = body.codeDifficulty;
+      }
     } catch {
-      // body optional
+      // body es opcional
     }
 
-    const typesInstruction =
-      allowedTypes.length < ALLOWED_TYPES.length
-        ? `Genera SOLO ejercicios de estos tipos: ${allowedTypes.join(", ")}. No incluyas otros tipos. `
-        : "";
+    const systemPrompt = buildExerciseSystemPrompt();
+    const userPrompt = buildExerciseUserPrompt({
+      lessonTitle: lesson.title,
+      lessonContent: lesson.content,
+      count,
+      allowedTypes:
+        allowedTypes.length < ALLOWED_TYPES.length
+          ? allowedTypes
+          : undefined,
+      codeLanguage,
+      codeDifficulty,
+    });
 
-    const codeLanguageInstruction =
-      allowedTypes.includes("CODE") && codeLanguage
-        ? `Para todos los ejercicios de tipo CODE, usa únicamente el lenguaje ${codeLanguage}. El campo "language" debe ser "${codeLanguage}" y template/solution deben estar escritos en ese lenguaje. `
-        : "";
-
-    const systemPrompt = `Eres un creador de ejercicios de evaluación para un curso de QA.
-Genera ejercicios en español basados en el contenido de la lección.
-Tipos permitidos: MULTIPLE_CHOICE (4 opciones, una correcta), TRUE_FALSE y CODE (cuando el contenido sea sobre programación, tests o scripts).
-Para CODE: { "type": "CODE", "question": "enunciado", "language": "javascript"|"python"|"typescript"|"java", "template": "código inicial para el alumno (con huecos o pocos cambios)", "solution": "código correcto completo que debe coincidir con la respuesta del alumno", "testCases": [ { "input": "entrada por stdin", "expectedOutput": "salida esperada" } ] }. Incluir al menos un test case. El campo "solution" es el código solución que se comparará con lo que escriba el alumno.
-Responde ÚNICAMENTE con un JSON: { "exercises": [ ... ] }. MULTIPLE_CHOICE: "options" array de 4 strings, "correctAnswer" índice 0-3. TRUE_FALSE: "correctAnswer" true/false. Mezcla tipos. Las preguntas evalúan comprensión del contenido.`;
-
-    const userPrompt = `Lección: "${lesson.title}"
-
-Contenido:
-${lesson.content}
-
-${typesInstruction}${codeLanguageInstruction}Genera exactamente ${count} ejercicios. Responde con JSON: { "exercises": [ ... ] }`;
-
+    const model = await getOpenAIModel();
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -157,7 +211,7 @@ ${typesInstruction}${codeLanguageInstruction}Genera exactamente ${count} ejercic
     if (!raw) {
       return NextResponse.json(
         { error: "La IA no devolvió contenido" },
-        { status: 502 }
+        { status: 502 },
       );
     }
 
@@ -167,7 +221,7 @@ ${typesInstruction}${codeLanguageInstruction}Genera exactamente ${count} ejercic
     } catch {
       return NextResponse.json(
         { error: "Respuesta de la IA no es JSON válido" },
-        { status: 502 }
+        { status: 502 },
       );
     }
 
@@ -177,8 +231,11 @@ ${typesInstruction}${codeLanguageInstruction}Genera exactamente ${count} ejercic
       .filter((ex) => allowedTypes.includes((ex as { type: string }).type));
     if (valid.length === 0) {
       return NextResponse.json(
-        { error: "La IA no generó ejercicios válidos de los tipos solicitados" },
-        { status: 502 }
+        {
+          error:
+            "La IA no generó ejercicios válidos de los tipos solicitados",
+        },
+        { status: 502 },
       );
     }
 
@@ -190,9 +247,12 @@ ${typesInstruction}${codeLanguageInstruction}Genera exactamente ${count} ejercic
       const ex = valid[i];
       let optionsStr: string;
       let correctStr: string;
+      let exerciseDifficulty: string | undefined;
+
       if (ex.type === "CODE") {
         const lang =
-          codeLanguage && (CODE_LANGUAGES as readonly string[]).includes(codeLanguage)
+          codeLanguage &&
+          (CODE_LANGUAGES as readonly string[]).includes(codeLanguage)
             ? codeLanguage
             : ex.language;
         optionsStr = JSON.stringify({
@@ -204,15 +264,42 @@ ${typesInstruction}${codeLanguageInstruction}Genera exactamente ${count} ejercic
           ex.solution != null && typeof ex.solution === "string"
             ? ex.solution
             : ex.template;
-      } else if (ex.type === "MULTIPLE_CHOICE" && ex.options && ex.options.length >= 2) {
+
+        // Dificultad: priorizar lo que pidió el admin, luego lo que devolvió la IA
+        if (
+          codeDifficulty &&
+          VALID_DIFFICULTY.includes(
+            codeDifficulty as (typeof VALID_DIFFICULTY)[number],
+          )
+        ) {
+          exerciseDifficulty = codeDifficulty;
+        } else if (
+          ex.difficulty &&
+          VALID_DIFFICULTY.includes(
+            ex.difficulty as (typeof VALID_DIFFICULTY)[number],
+          )
+        ) {
+          exerciseDifficulty = ex.difficulty;
+        }
+      } else if (
+        ex.type === "MULTIPLE_CHOICE" &&
+        ex.options &&
+        ex.options.length >= 2
+      ) {
         optionsStr = JSON.stringify(ex.options.slice(0, 4));
         correctStr = JSON.stringify(
-          typeof ex.correctAnswer === "number" && Number.isInteger(ex.correctAnswer) ? ex.correctAnswer : 0
+          typeof ex.correctAnswer === "number" &&
+            Number.isInteger(ex.correctAnswer)
+            ? ex.correctAnswer
+            : 0,
         );
       } else {
         optionsStr = JSON.stringify(["Verdadero", "Falso"]);
-        correctStr = JSON.stringify(ex.type === "TRUE_FALSE" && ex.correctAnswer === true);
+        correctStr = JSON.stringify(
+          ex.type === "TRUE_FALSE" && ex.correctAnswer === true,
+        );
       }
+
       const exercise = await prisma.exercise.create({
         data: {
           lessonId,
@@ -221,6 +308,14 @@ ${typesInstruction}${codeLanguageInstruction}Genera exactamente ${count} ejercic
           options: optionsStr,
           correctAnswer: correctStr,
           order: existingCount + i,
+          ...(exerciseDifficulty && {
+            difficulty: exerciseDifficulty as
+              | "APRENDIZ"
+              | "JUNIOR"
+              | "MID"
+              | "SENIOR"
+              | "ESPECIALISTA",
+          }),
         },
       });
       created.push(exercise);
@@ -238,7 +333,7 @@ ${typesInstruction}${codeLanguageInstruction}Genera exactamente ${count} ejercic
             ? "Error de configuración con OpenAI. Revisa OPENAI_API_KEY."
             : "Error al generar los ejercicios con IA.",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

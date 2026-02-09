@@ -48,7 +48,7 @@ export default async function MiCarreraPage() {
 
   const userId = session.user.id;
 
-  const [progress, modules] = await Promise.all([
+  const [progress, modules, certificates] = await Promise.all([
     prisma.progress.findMany({
       where: { userId },
       orderBy: { completedAt: "desc" },
@@ -67,6 +67,11 @@ export default async function MiCarreraPage() {
           select: { id: true },
         },
       },
+    }),
+    prisma.certificate.findMany({
+      where: { userId },
+      orderBy: { issuedAt: "desc" },
+      include: { module: { select: { title: true } } },
     }),
   ]);
 
@@ -92,7 +97,7 @@ export default async function MiCarreraPage() {
     (p) => p.totalCount > 0 && p.completedCount === p.totalCount
   ).length;
   const lastActivity = progress.length > 0 ? progress[0].completedAt : null;
-  const achievements = getDerivedAchievements(progress, modulesForProfile);
+  const achievements = await getDerivedAchievements(progress, modulesForProfile);
   const timeSeriesData = getProgressTimeSeries(progress, {
     lastDays: TIME_SERIES_LAST_DAYS,
   });
@@ -295,6 +300,41 @@ export default async function MiCarreraPage() {
             </ul>
           )}
         </section>
+
+        {/* Certificados */}
+        {certificates.length > 0 && (
+          <section
+            className="mb-8 rounded-lg border border-border bg-surface p-6"
+            aria-labelledby="carrera-certificados-heading"
+          >
+            <h2
+              id="carrera-certificados-heading"
+              className="mb-4 text-lg font-semibold text-foreground"
+            >
+              Certificados obtenidos
+            </h2>
+            <ul className="space-y-3">
+              {certificates.map((cert) => (
+                <li key={cert.id} className="flex items-center justify-between rounded border border-border bg-background p-3">
+                  <div>
+                    <p className="font-medium text-foreground">
+                      {cert.module.title}
+                    </p>
+                    <p className="text-xs text-muted">
+                      Emitido el {formatDate(cert.issuedAt)}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/certificados/${cert.id}`}
+                    className="rounded border border-accent bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+                  >
+                    Ver certificado
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {/* Actividad reciente */}
         <section
