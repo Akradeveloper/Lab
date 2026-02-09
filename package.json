@@ -15,7 +15,8 @@
     "db:backup": "tsx scripts/db-backup.ts",
     "db:restore": "tsx scripts/db-restore.ts",
     "db:migrate:local": "dotenv -e .env.local -- prisma migrate dev",
-    "db:push:local": "dotenv -e .env.local -- prisma db push"
+    "db:push:local": "dotenv -e .env.local -- prisma db push",
+    "sonar": "dotenv -e .env -- sh -c 'docker run --rm -e SONAR_HOST_URL -e SONAR_TOKEN -v \"$(pwd):/usr/src\" -w /usr/src sonarsource/sonar-scanner-cli'"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
