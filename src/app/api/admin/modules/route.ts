@@ -9,7 +9,7 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
+  if (session?.user?.role !== "ADMIN") {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
@@ -39,7 +39,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
+  if (session?.user?.role !== "ADMIN") {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
