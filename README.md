@@ -44,6 +44,17 @@ Con **MySQL**, el panel **Admin → Base de datos** permite descargar un backup 
 
 En producción (Render, VPS, etc.), programa dumps periódicos o usa las opciones de backup que ofrezca tu proveedor de MySQL.
 
+## Tests y calidad
+
+Los tests están en la carpeta **`tests/`** en la raíz del proyecto (estructura que replica `src/` para localizarlos fácilmente).
+
+- **Ejecutar tests:** `npm test` (modo watch) o `npm run test:run` (una sola vez).
+- **Cobertura:** `npm run test:coverage` (genera el informe en `coverage/` y `coverage/lcov.info` para SonarQube).
+
+El CI (GitHub Actions) ejecuta `npm run lint` y `npm run test:coverage` en cada push y en los PR a `develop`/`master`. Si tienes un servidor **SonarQube**, configura en el repositorio los secrets `SONAR_HOST_URL` (URL del servidor) y `SONAR_TOKEN` (token de análisis). El workflow `.github/workflows/ci.yml` enviará las métricas y la cobertura al analizar. Para ejecutar el scanner en local: instala [SonarScanner](https://docs.sonarqube.org/latest/analyzing-source-code/scanners/sonarscanner/) y ejecuta el análisis con `SONAR_HOST_URL` y `SONAR_TOKEN` en el entorno; el proyecto usa `sonar-project.properties` en la raíz.
+
+**SonarQube en Docker:** Si arrancas el stack con `docker compose up` (o `docker-compose up`), se levanta también **SonarQube** en [http://localhost:9001](http://localhost:9001). Para ejecutar el análisis desde tu máquina sin instalar Java: `npm run test:coverage` (generar cobertura) y luego `npm run sonar`. El script lanza un contenedor del scanner que se elimina al terminar (`--rm`) y se comunica con tu SonarQube (p. ej. en Portainer). Configura en `.env`: `SONAR_HOST_URL` (URL del servidor, p. ej. `http://192.168.2.2:9001`) y `SONAR_TOKEN` (token generado en SonarQube). Primer acceso a SonarQube: usuario `admin`, contraseña `admin` (te pedirá cambiarla).
+
 ## Documentación
 
 La documentación del proyecto (getting started, arquitectura, contribución) está en **Docusaurus** dentro de la carpeta `website/`:
