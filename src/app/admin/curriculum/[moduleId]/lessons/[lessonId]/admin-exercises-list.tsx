@@ -623,7 +623,7 @@ export function AdminExercisesList({
                       onChange={() => setFormCorrectBool(true)}
                       className="rounded border-border text-accent focus:ring-accent"
                     />
-                    Verdadero
+                    <span>Verdadero</span>
                   </label>
                   <label className="flex items-center gap-2">
                     <input
@@ -633,7 +633,7 @@ export function AdminExercisesList({
                       onChange={() => setFormCorrectBool(false)}
                       className="rounded border-border text-accent focus:ring-accent"
                     />
-                    Falso
+                    <span>Falso</span>
                   </label>
                 </div>
               </div>
@@ -644,7 +644,7 @@ export function AdminExercisesList({
                 type="number"
                 value={formOrder}
                 onChange={(e) =>
-                  setFormOrder(parseInt(e.target.value, 10) || 0)
+                  setFormOrder(Number.parseInt(e.target.value, 10) || 0)
                 }
                 className="mt-1 w-full max-w-[120px] rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
               />

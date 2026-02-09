@@ -33,4 +33,15 @@ describe("handlePrismaError", () => {
     );
     expect(res.status).toBe(500);
   });
+
+  it("registra en consola cuando NODE_ENV no es production y options.context está definido", () => {
+    const err = new Error("DB error");
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    handlePrismaError(err, {
+      notFoundMessage: "No encontrado",
+      context: "Error al guardar",
+    });
+    expect(spy).toHaveBeenCalledWith("Error al guardar", err);
+    spy.mockRestore();
+  });
 });

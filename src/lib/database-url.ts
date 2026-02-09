@@ -66,7 +66,7 @@ export function getPrismaAdapterConfig(): string | PrismaAdapterPoolConfig {
         `DB_SSL_CA está definida; faltan variables de BD: ${missing.join(", ")}. Usa DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER.`
       );
     }
-    const cert = dbCa.replace(/\\n/g, "\n");
+    const cert = dbCa.replaceAll(String.raw`\n`, "\n");
     return {
       host: DB_HOST!,
       port: Number(DB_PORT),

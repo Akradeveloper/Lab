@@ -123,6 +123,78 @@ describe("PUT /api/admin/modules/[moduleId]", () => {
     expect(data.title).toBe("Título actualizado");
     expect(data.order).toBe(1);
   });
+
+  it("devuelve 200 con solo order y asigna data.order", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.update).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      description: null,
+      order: 2,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as never);
+    const req = new Request("https://example.com", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order: 2 }),
+    });
+    const res = await PUT(req, { params: Promise.resolve({ moduleId: "m1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.module.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ order: 2 }),
+      })
+    );
+  });
+
+  it("devuelve 200 con description null", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.update).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      description: null,
+      order: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as never);
+    const req = new Request("https://example.com", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: null }),
+    });
+    const res = await PUT(req, { params: Promise.resolve({ moduleId: "m1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.module.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ description: null }),
+      })
+    );
+  });
+
+  it("devuelve 200 con description vacío y asigna data.description null (L28)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.update).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      description: null,
+      order: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as never);
+    const req = new Request("https://example.com", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: "" }),
+    });
+    const res = await PUT(req, { params: Promise.resolve({ moduleId: "m1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.module.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ description: null }),
+      })
+    );
+  });
 });
 
 describe("DELETE /api/admin/modules/[moduleId]", () => {

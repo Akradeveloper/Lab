@@ -37,4 +37,19 @@ describe("env", () => {
     expect(env.NEXTAUTH_URL).toBe("http://localhost:3000");
     expect(env.DATABASE_URL).toBe("file:./prisma/dev.db");
   });
+
+  it("lanza con mensaje DATABASE_URL o DB_* cuando no hay config de BD ni fase build", async () => {
+    process.env.NEXTAUTH_SECRET = "s";
+    process.env.NEXTAUTH_URL = "http://localhost:3000";
+    delete process.env.DATABASE_URL;
+    delete process.env.DB_HOST;
+    delete process.env.DB_NAME;
+    delete process.env.DB_PASSWORD;
+    delete process.env.DB_PORT;
+    delete process.env.DB_USER;
+    delete process.env.NEXT_PHASE;
+    await expect(import("@/lib/env")).rejects.toThrow(
+      /DATABASE_URL o \(DB_HOST/
+    );
+  });
 });

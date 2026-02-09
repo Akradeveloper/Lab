@@ -111,7 +111,7 @@ function buildComponents(sections: TabSection[]): Components {
         const text = typeof children === "string" ? children : (children[0] as string);
         const tabMatch = /^%%CODE_TABS_(\d+)%%$/.exec(text.trim());
         if (tabMatch) {
-          const sectionIdx = parseInt(tabMatch[1], 10);
+          const sectionIdx = Number.parseInt(tabMatch[1], 10);
           const section = sections[sectionIdx];
           if (section) {
             return <CodeTabs blocks={section.blocks} />;

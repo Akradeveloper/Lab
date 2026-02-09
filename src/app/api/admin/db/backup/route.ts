@@ -12,7 +12,7 @@ export async function GET() {
   if (!session) return unauthorized();
 
   const now = new Date();
-  const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const timestamp = now.toISOString().replaceAll(/[:.]/g, "-").slice(0, 19);
 
   try {
     if (isMySQL()) {

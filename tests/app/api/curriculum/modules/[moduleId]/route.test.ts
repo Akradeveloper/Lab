@@ -99,4 +99,37 @@ describe("GET /api/curriculum/modules/[moduleId]", () => {
     expect(data.completedCount).toBe(1);
     expect(data.totalCount).toBe(2);
   });
+
+  it("devuelve 200 con módulo sin submodules y lessons directas (submodules.length === 0)", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "user1", email: "a@b.com", name: "U" },
+      expires: "",
+    } as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      title: "Módulo sin submodules",
+      description: null,
+      order: 0,
+      submodules: [],
+      lessons: [
+        { id: "l1", title: "Lección directa 1", order: 0 },
+        { id: "l2", title: "Lección directa 2", order: 1 },
+      ],
+    } as never);
+    vi.mocked(prisma.progress.findMany).mockResolvedValue([{ lessonId: "l1" }] as never);
+    const res = await GET(new Request("https://example.com"), {
+      params: Promise.resolve({ moduleId: "m1" }),
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.id).toBe("m1");
+    expect(data.submodules).toEqual([]);
+    expect(data.lessons).toHaveLength(2);
+    expect(data.lessons[0].id).toBe("l1");
+    expect(data.lessons[0].title).toBe("Lección directa 1");
+    expect(data.lessons[0].completed).toBe(true);
+    expect(data.lessons[1].completed).toBe(false);
+    expect(data.completedCount).toBe(1);
+    expect(data.totalCount).toBe(2);
+  });
 });

@@ -4,8 +4,15 @@ import { POST } from "@/app/api/admin/db/wipe/route";
 vi.mock("@/lib/api-auth", () => ({ getAdminSession: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    user: { findUnique: vi.fn() },
+    user: { findUnique: vi.fn(), deleteMany: vi.fn().mockResolvedValue(undefined) },
     $transaction: vi.fn(),
+    exerciseAttempt: { deleteMany: vi.fn().mockResolvedValue(undefined) },
+    lessonCheckAttempt: { deleteMany: vi.fn().mockResolvedValue(undefined) },
+    progress: { deleteMany: vi.fn().mockResolvedValue(undefined) },
+    exercise: { deleteMany: vi.fn().mockResolvedValue(undefined) },
+    lesson: { deleteMany: vi.fn().mockResolvedValue(undefined) },
+    submodule: { deleteMany: vi.fn().mockResolvedValue(undefined) },
+    module: { deleteMany: vi.fn().mockResolvedValue(undefined) },
   },
 }));
 vi.mock("bcryptjs", () => ({ default: { compare: vi.fn() } }));
@@ -105,8 +112,28 @@ describe("POST /api/admin/db/wipe", () => {
     expect(data.error).toContain("vaciar");
   });
 
+  it("devuelve 500 si $transaction lanza (con NODE_ENV=production no registra en consola)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.$transaction).mockRejectedValue(new Error("DB error"));
+    const orig = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    const req = new Request("https://x.com", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: "secret" }),
+    });
+    const res = await POST(req);
+    process.env.NODE_ENV = orig;
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toContain("vaciar");
+  });
+
   it("devuelve 200 y vacía la BD con contraseña correcta", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.$transaction).mockImplementation(
+      async (fn: (tx: unknown) => Promise<unknown>) => fn(prisma as never)
+    );
     const req = new Request("https://x.com", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -18,7 +18,7 @@ export function Breadcrumbs({ items }: Props) {
 
   return (
     <nav aria-label="Breadcrumbs" className="mb-6">
-      {/* Schema.org para SEO */}
+      {/* Schema.org para SEO. Safe: JSON.stringify escapa datos, no se inyecta HTML crudo. */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

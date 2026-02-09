@@ -100,6 +100,22 @@ describe("PUT /api/admin/exercises/[id]", () => {
     expect(data.error).toContain("orden");
   });
 
+  it("devuelve 200 con solo order y asigna data.order", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const req = new Request("https://example.com", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order: 1 }),
+    });
+    const res = await PUT(req, { params: Promise.resolve({ id: "e1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.exercise.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ order: 1 }),
+      })
+    );
+  });
+
   it("devuelve 200 con actualización parcial (question)", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
     vi.mocked(prisma.exercise.update).mockResolvedValue({
@@ -124,6 +140,22 @@ describe("PUT /api/admin/exercises/[id]", () => {
     expect(data.question).toBe("Nueva pregunta");
   });
 
+  it("devuelve 200 con options como string", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const req = new Request("https://example.com", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ options: '["Opción 1","Opción 2"]' }),
+    });
+    const res = await PUT(req, { params: Promise.resolve({ id: "e1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.exercise.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ options: '["Opción 1","Opción 2"]' }),
+      })
+    );
+  });
+
   it("devuelve 200 con options como array", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
     const req = new Request("https://example.com", {
@@ -136,6 +168,22 @@ describe("PUT /api/admin/exercises/[id]", () => {
     expect(prisma.exercise.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ options: '["A","B","C"]' }),
+      })
+    );
+  });
+
+  it("asigna options [] cuando options no es string/array/objeto", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const req = new Request("https://example.com", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ options: null }),
+    });
+    const res = await PUT(req, { params: Promise.resolve({ id: "e1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.exercise.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ options: "[]" }),
       })
     );
   });
@@ -158,6 +206,134 @@ describe("PUT /api/admin/exercises/[id]", () => {
           options: expect.any(String),
           type: "CODE",
         }),
+      })
+    );
+  });
+
+  it("devuelve 200 con correctAnswer CODE (string)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const req = new Request("https://example.com", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "CODE", correctAnswer: "return 1;" }),
+    });
+    const res = await PUT(req, { params: Promise.resolve({ id: "e1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.exercise.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ correctAnswer: "return 1;" }),
+      })
+    );
+  });
+
+  it("devuelve 200 con correctAnswer CODE no string (asigna vacío, L51 rama else)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const req = new Request("https://example.com", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "CODE", correctAnswer: 42 }),
+    });
+    const res = await PUT(req, { params: Promise.resolve({ id: "e1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.exercise.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ correctAnswer: "" }),
+      })
+    );
+  });
+
+  it("devuelve 200 con correctAnswer DESARROLLO (vacío)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const req = new Request("https://example.com", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "DESARROLLO", correctAnswer: "cualquier cosa" }),
+    });
+    const res = await PUT(req, { params: Promise.resolve({ id: "e1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.exercise.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ correctAnswer: "" }),
+      })
+    );
+  });
+
+  it("devuelve 200 con correctAnswer TRUE_FALSE true", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const req = new Request("https://example.com", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "TRUE_FALSE", correctAnswer: true }),
+    });
+    const res = await PUT(req, { params: Promise.resolve({ id: "e1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.exercise.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ correctAnswer: "true" }),
+      })
+    );
+  });
+
+  it("devuelve 200 con correctAnswer TRUE_FALSE false (L56 rama JSON.stringify(false))", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const req = new Request("https://example.com", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "TRUE_FALSE", correctAnswer: false }),
+    });
+    const res = await PUT(req, { params: Promise.resolve({ id: "e1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.exercise.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ correctAnswer: "false" }),
+      })
+    );
+  });
+
+  it("devuelve 200 con correctAnswer TRUE_FALSE string 'true'", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const req = new Request("https://example.com", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "TRUE_FALSE", correctAnswer: "true" }),
+    });
+    const res = await PUT(req, { params: Promise.resolve({ id: "e1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.exercise.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ correctAnswer: "true" }),
+      })
+    );
+  });
+
+  it("devuelve 200 con correctAnswer MULTIPLE_CHOICE (índice entero)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const req = new Request("https://example.com", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "MULTIPLE_CHOICE", correctAnswer: 2 }),
+    });
+    const res = await PUT(req, { params: Promise.resolve({ id: "e1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.exercise.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ correctAnswer: "2" }),
+      })
+    );
+  });
+
+  it("devuelve 200 con correctAnswer no entero (rama por defecto -> 0)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const req = new Request("https://example.com", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ correctAnswer: "texto" }),
+    });
+    const res = await PUT(req, { params: Promise.resolve({ id: "e1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.exercise.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ correctAnswer: "0" }),
       })
     );
   });

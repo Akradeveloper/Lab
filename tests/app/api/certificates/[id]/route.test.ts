@@ -51,4 +51,25 @@ describe("GET /api/certificates/[id]", () => {
     expect(data.moduleTitle).toBe("Módulo 1");
     expect(data.issuedAt).toBeDefined();
   });
+
+  it("devuelve 500 cuando findUnique lanza", async () => {
+    vi.mocked(prisma.certificate.findUnique).mockRejectedValue(new Error("DB error"));
+    const res = await GET(new Request("https://x.com"), {
+      params: Promise.resolve({ id: "c1" }),
+    });
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toBe("Error al obtener el certificado");
+  });
+
+  it("ejecuta console.error del catch cuando findUnique lanza (L43)", async () => {
+    vi.mocked(prisma.certificate.findUnique).mockRejectedValue(new Error("DB error"));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await GET(new Request("https://x.com"), {
+      params: Promise.resolve({ id: "c1" }),
+    });
+    expect(res.status).toBe(500);
+    expect(consoleSpy).toHaveBeenCalledWith("Error al obtener certificado:", expect.any(Error));
+    consoleSpy.mockRestore();
+  });
 });

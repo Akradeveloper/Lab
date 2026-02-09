@@ -54,4 +54,25 @@ describe("rate-limit", () => {
     expect(a2).toBeNull();
     expect(b2).toBeNull();
   });
+
+  it("resetea el contador cuando now >= entry.resetAt", async () => {
+    const baseTime = 1000000000000;
+    vi.setSystemTime(baseTime);
+    vi.mocked(getAppConfigNumber).mockImplementation(async (key: string) => {
+      if (key === "rate_limit_window_minutes") return 15;
+      if (key === "rate_limit_max_requests") return 2;
+      return 0;
+    });
+    const req = new Request("https://example.com", {
+      headers: { "x-forwarded-for": "200.200.200.200" },
+    });
+    await checkRegisterRateLimit(req);
+    await checkRegisterRateLimit(req);
+    const third = await checkRegisterRateLimit(req);
+    expect(third).not.toBeNull();
+    vi.setSystemTime(baseTime + 16 * 60 * 1000);
+    const afterReset = await checkRegisterRateLimit(req);
+    expect(afterReset).toBeNull();
+    vi.useRealTimers();
+  });
 });

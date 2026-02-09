@@ -66,4 +66,16 @@ describe("GET /api/admin/testimonials", () => {
     expect(data[0].createdAt).toBe(createdAt.toISOString());
     expect(data[0].user).toEqual({ id: "u1", name: "Usuario", email: "u@e.com" });
   });
+
+  it("devuelve 500 cuando findMany lanza", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "admin1", email: "admin@b.com", role: "ADMIN", name: "Admin" },
+      expires: "",
+    } as never);
+    vi.mocked(prisma.testimonial.findMany).mockRejectedValue(new Error("DB error"));
+    const res = await GET();
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toContain("cargar testimonios");
+  });
 });

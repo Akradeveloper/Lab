@@ -73,4 +73,26 @@ describe("GET /api/curriculum/lessons/[lessonId]", () => {
     expect(data.title).toBe("Lección 1");
     expect(data.exercises).toBeDefined();
   });
+
+  it("devuelve 200 con exercises.options inválido (parseOptions devuelve [])", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(session as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      title: "Lección",
+      content: "",
+      order: 0,
+      module: { id: "m1", title: "M1" },
+      submodule: null,
+      exercises: [
+        { id: "e1", type: "MULTIPLE_CHOICE", question: "P?", options: "not-valid-json", order: 0 },
+      ],
+    } as never);
+    const res = await GET(new Request("https://x.com"), {
+      params: Promise.resolve({ lessonId: "l1" }),
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.exercises).toHaveLength(1);
+    expect(data.exercises[0].options).toEqual([]);
+  });
 });

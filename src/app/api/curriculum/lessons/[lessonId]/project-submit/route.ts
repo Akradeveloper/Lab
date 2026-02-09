@@ -108,7 +108,7 @@ export async function POST(request: Request, { params }: Params) {
         );
       }
       const timestamp = Date.now();
-      const safeName = `${timestamp}-${(file.name || "file").replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const safeName = `${timestamp}-${(file.name || "file").replaceAll(/[^a-zA-Z0-9._-]/g, "_")}`;
       const relativeDir = `${UPLOAD_BASE}/${userId}/${lessonId}`;
       const fullDir = path.join(process.cwd(), relativeDir);
       fs.mkdirSync(fullDir, { recursive: true });

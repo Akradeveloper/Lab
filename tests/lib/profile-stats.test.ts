@@ -135,6 +135,26 @@ describe("profile-stats", () => {
         true
       );
     });
+
+    it("rellena serie con lastDays (ejecuta bucle filled y map.get)", () => {
+      const today = new Date();
+      const progress: ProgressItem[] = [
+        {
+          courseId: "m1",
+          lessonId: "l1",
+          completedAt: today,
+        },
+      ];
+      const result = getProgressTimeSeries(progress, {
+        groupBy: "day",
+        lastDays: 3,
+      });
+      expect(result).toHaveLength(4);
+      const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      const todayEntry = result.find((p) => p.date === dateKey);
+      expect(todayEntry).toBeDefined();
+      expect(todayEntry!.count).toBe(1);
+    });
   });
 
   describe("getRecentActivityItems", () => {
@@ -174,6 +194,36 @@ describe("profile-stats", () => {
         lessonMap
       );
       expect(result).toHaveLength(0);
+    });
+
+    it("filtra cuando la lección no está en el map", () => {
+      const lessonMap = new Map([
+        ["l1", { id: "l1", title: "L1", moduleId: "m1", submoduleId: null }],
+      ]);
+      const result = getRecentActivityItems(
+        [
+          { lessonId: "l1", completedAt: new Date() },
+          { lessonId: "l2", completedAt: new Date() },
+        ],
+        lessonMap
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0].lessonId).toBe("l1");
+    });
+
+    it("devuelve varios items cuando varias lecciones tienen moduleId en el map", () => {
+      const progressSlice = [
+        { lessonId: "l1", completedAt: new Date("2025-01-01") },
+        { lessonId: "l2", completedAt: new Date("2025-01-02") },
+      ];
+      const lessonMap = new Map([
+        ["l1", { id: "l1", title: "L1", moduleId: "m1", submoduleId: "s1" }],
+        ["l2", { id: "l2", title: "L2", moduleId: "m1", submoduleId: null }],
+      ]);
+      const result = getRecentActivityItems(progressSlice, lessonMap);
+      expect(result).toHaveLength(2);
+      expect(result[0].url).toBe("/modulos/m1/submodulos/s1/lecciones/l1");
+      expect(result[1].url).toBe("/modulos/m1/lecciones/l2");
     });
   });
 

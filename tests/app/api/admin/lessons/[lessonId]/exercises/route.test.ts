@@ -34,6 +34,16 @@ describe("GET /api/admin/lessons/[lessonId]/exercises", () => {
     expect(data.error).toBe("No autorizado");
   });
 
+  it("devuelve 400 si lessonId está vacío (GET L13)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const res = await GET(new Request("https://example.com"), {
+      params: Promise.resolve({ lessonId: "" }),
+    });
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("ID de lección requerido");
+  });
+
   it("devuelve 200 con lista de ejercicios", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
     vi.mocked(prisma.exercise.findMany).mockResolvedValue([
@@ -231,6 +241,41 @@ describe("POST /api/admin/lessons/[lessonId]/exercises", () => {
     expect(data.type).toBe("CODE");
   });
 
+  it("devuelve 200 y crea ejercicio CODE con options mínimos (L55-64 defaults language/template)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.exercise.create).mockResolvedValue({
+      id: "ex1",
+      lessonId: "l1",
+      type: "CODE",
+      question: "Escribe código",
+      options: '{"language":"javascript","template":"","testCases":[]}',
+      correctAnswer: "",
+      order: 0,
+      createdAt: new Date(),
+    } as never);
+    const res = await POST(
+      new Request("https://example.com", {
+        method: "POST",
+        body: JSON.stringify({
+          type: "CODE",
+          question: "Escribe código",
+          options: {},
+          correctAnswer: 123,
+        }),
+      }),
+      { params: Promise.resolve({ lessonId: "l1" }) }
+    );
+    expect(res.status).toBe(200);
+    expect(prisma.exercise.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          options: expect.stringContaining("javascript"),
+          correctAnswer: "",
+        }),
+      })
+    );
+  });
+
   it("devuelve 200 y crea ejercicio DESARROLLO", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
     vi.mocked(prisma.exercise.create).mockResolvedValue({
@@ -271,5 +316,20 @@ describe("POST /api/admin/lessons/[lessonId]/exercises", () => {
     expect(res.status).toBe(404);
     const data = await res.json();
     expect(data.error).toBe("Lección no encontrada");
+  });
+
+  it("devuelve 500 cuando create falla con error distinto de P2003", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.exercise.create).mockRejectedValue(new Error("DB connection failed"));
+    const res = await POST(
+      new Request("https://example.com", {
+        method: "POST",
+        body: JSON.stringify({ type: "MULTIPLE_CHOICE", question: "Q" }),
+      }),
+      { params: Promise.resolve({ lessonId: "l1" }) }
+    );
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toContain("Error al crear el ejercicio");
   });
 });

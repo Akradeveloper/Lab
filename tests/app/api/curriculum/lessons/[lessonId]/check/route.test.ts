@@ -216,4 +216,28 @@ describe("POST /api/curriculum/lessons/[lessonId]/check", () => {
     expect(data.results).toEqual([]);
     expect(data.allCorrect).toBe(true);
   });
+
+  it("devuelve 200 y marca incorrecto cuando isAnswerCorrect lanza (ej. correctAnswer JSON inválido)", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(session as never);
+    vi.mocked(prisma.exercise.findMany).mockResolvedValue([
+      {
+        id: "exBroken",
+        type: "MULTIPLE_CHOICE",
+        correctAnswer: "{", // JSON inválido: JSON.parse lanza, catch devuelve false
+        order: 0,
+      },
+    ] as never);
+    const res = await POST(
+      new Request("https://x.com", {
+        method: "POST",
+        body: JSON.stringify({ answers: { exBroken: 0 } }),
+      }),
+      { params: Promise.resolve({ lessonId: "l1" }) }
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.allCorrect).toBe(false);
+    const broken = data.results.find((r: { exerciseId: string }) => r.exerciseId === "exBroken");
+    expect(broken).toEqual({ exerciseId: "exBroken", correct: false });
+  });
 });

@@ -87,8 +87,8 @@ export async function POST(request: Request, { params }: Params) {
 
 function normalizeCode(s: string): string {
   return String(s ?? "")
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
+    .replaceAll("\r\n", "\n")
+    .replaceAll("\r", "\n")
     .trim();
 }
 
@@ -120,8 +120,8 @@ function isAnswerCorrect(
         typeof userAnswer === "number"
           ? userAnswer
           : typeof userAnswer === "string"
-            ? parseInt(userAnswer, 10)
-            : NaN;
+            ? Number.parseInt(userAnswer, 10)
+            : Number.NaN;
       return Number.isInteger(idx) && idx === correct;
     }
 

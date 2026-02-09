@@ -68,4 +68,21 @@ describe("PATCH /api/admin/testimonials/[id]/approve", () => {
       data: { approved: true },
     });
   });
+
+  it("devuelve 404 cuando update rechaza con P2025 (L32 handlePrismaError)", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "admin1", email: "a@b.com", role: "ADMIN", name: "Admin" },
+      expires: "",
+    } as never);
+    vi.mocked(prisma.testimonial.update).mockRejectedValue({ code: "P2025" });
+    const req = new Request("https://example.com", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ approved: true }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "inexistente" }) });
+    expect(res.status).toBe(404);
+    const data = await res.json();
+    expect(data.error).toBe("Testimonio no encontrado");
+  });
 });

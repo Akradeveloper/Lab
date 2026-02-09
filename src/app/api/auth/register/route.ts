@@ -3,6 +3,19 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { checkRegisterRateLimit } from "@/lib/rate-limit";
 
+/** Validación de formato email sin regex para evitar ReDoS (local@dominio.ext). */
+function isValidEmailFormat(s: string): boolean {
+  if (s.length === 0) return false;
+  const atIndex = s.indexOf("@");
+  if (atIndex <= 0 || atIndex === s.length - 1) return false;
+  const local = s.slice(0, atIndex);
+  const domain = s.slice(atIndex + 1);
+  const dotIndex = domain.indexOf(".");
+  if (dotIndex <= 0 || dotIndex === domain.length - 1) return false;
+  if (local.includes(" ") || domain.includes(" ")) return false;
+  return true;
+}
+
 export async function POST(request: Request) {
   try {
     const rateLimitError = await checkRegisterRateLimit(request);
@@ -74,8 +87,8 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    // Formato básico de email (local@dominio.ext)
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+    // Formato básico de email (local@dominio.ext). Validación sin regex para evitar ReDoS.
+    if (!isValidEmailFormat(trimmedEmail)) {
       return NextResponse.json(
         { error: "El formato del email no es válido" },
         { status: 400 }

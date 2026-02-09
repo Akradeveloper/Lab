@@ -95,4 +95,49 @@ describe("POST /api/admin/project-submissions/[submissionId]/approve", () => {
     expect(data.ok).toBe(true);
     expect(typeof data.certificateId === "string" || data.certificateId === null).toBe(true);
   });
+
+  it("devuelve 500 cuando update rechaza tras encontrar entrega pendiente", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.projectSubmission.findUnique).mockResolvedValue({
+      id: "s1",
+      userId: "u1",
+      lessonId: "l1",
+      status: "PENDING",
+      lesson: { id: "l1", moduleId: "m1", submodule: { moduleId: "m1" } },
+    } as never);
+    vi.mocked(prisma.projectSubmission.update).mockRejectedValue(new Error("DB error"));
+    const res = await POST(new Request("https://x.com"), {
+      params: Promise.resolve({ submissionId: "s1" }),
+    });
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toContain("Error al aprobar");
+  });
+
+  it("devuelve 200 y ejecuta catch del certificado cuando certificate.create rechaza (L100-101)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.projectSubmission.findUnique).mockResolvedValue({
+      id: "s1",
+      userId: "u1",
+      lessonId: "l1",
+      status: "PENDING",
+      lesson: { id: "l1", moduleId: "m1", submodule: { moduleId: "m1" } },
+    } as never);
+    vi.mocked(prisma.projectSubmission.update).mockResolvedValue({} as never);
+    vi.mocked(prisma.progress.findFirst).mockResolvedValue(null);
+    vi.mocked(prisma.progress.create).mockResolvedValue({} as never);
+    vi.mocked(prisma.lesson.findMany).mockResolvedValue([{ id: "l1" }] as never);
+    vi.mocked(prisma.progress.findMany).mockResolvedValue([{ lessonId: "l1" }] as never);
+    vi.mocked(prisma.certificate.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.certificate.create).mockRejectedValue(new Error("cert create failed"));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await POST(new Request("https://x.com"), {
+      params: Promise.resolve({ submissionId: "s1" }),
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.ok).toBe(true);
+    expect(consoleSpy).toHaveBeenCalledWith("Error al verificar/emitir certificado:", expect.any(Error));
+    consoleSpy.mockRestore();
+  });
 });

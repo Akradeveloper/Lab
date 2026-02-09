@@ -170,4 +170,71 @@ describe("POST /api/admin/modules/[moduleId]/lessons", () => {
     const data = await res.json();
     expect(data.title).toBeDefined();
   });
+
+  it("devuelve 200 con difficulty y lessonType válidos (L74-81)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      _count: { submodules: 0 },
+    } as never);
+    vi.mocked(prisma.lesson.create).mockResolvedValue({
+      id: "l1",
+      title: "Lección",
+      content: "",
+      order: 0,
+      moduleId: "m1",
+      submoduleId: null,
+      lessonType: "project",
+      difficulty: "JUNIOR",
+      createdAt: new Date(),
+    } as never);
+    const res = await POST(
+      new Request("https://x.com", {
+        method: "POST",
+        body: JSON.stringify({ title: "Lección", difficulty: "JUNIOR", lessonType: "project" }),
+      }),
+      { params: Promise.resolve({ moduleId: "m1" }) }
+    );
+    expect(res.status).toBe(200);
+    expect(prisma.lesson.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          difficulty: "JUNIOR",
+          lessonType: "project",
+        }),
+      })
+    );
+  });
+
+  it("devuelve 404 cuando create rechaza con P2003", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      _count: { submodules: 0 },
+    } as never);
+    vi.mocked(prisma.lesson.create).mockRejectedValue({ code: "P2003" });
+    const res = await POST(
+      new Request("https://x.com", { method: "POST", body: JSON.stringify({ title: "Nueva" }) }),
+      { params: Promise.resolve({ moduleId: "m1" }) }
+    );
+    expect(res.status).toBe(404);
+    const data = await res.json();
+    expect(data.error).toBe("Módulo no encontrado");
+  });
+
+  it("devuelve 500 cuando prisma.lesson.create rechaza con error distinto de P2003", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      _count: { submodules: 0 },
+    } as never);
+    vi.mocked(prisma.lesson.create).mockRejectedValue(new Error("DB error"));
+    const res = await POST(
+      new Request("https://x.com", { method: "POST", body: JSON.stringify({ title: "Nueva" }) }),
+      { params: Promise.resolve({ moduleId: "m1" }) }
+    );
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toContain("Error al crear la lección");
+  });
 });

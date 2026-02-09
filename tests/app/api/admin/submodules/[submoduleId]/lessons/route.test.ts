@@ -104,4 +104,16 @@ describe("POST /api/admin/submodules/[submoduleId]/lessons", () => {
     const data = await res.json();
     expect(data.title).toBeDefined();
   });
+
+  it("devuelve 500 cuando prisma.lesson.create rechaza (L80-82)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.lesson.create).mockRejectedValue(new Error("DB error"));
+    const res = await POST(
+      new Request("https://x.com", { method: "POST", body: JSON.stringify({ title: "Nueva" }) }),
+      { params: Promise.resolve({ submoduleId: "s1" }) }
+    );
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toContain("Error al crear la lección");
+  });
 });

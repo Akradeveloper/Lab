@@ -78,4 +78,19 @@ describe("POST /api/admin/project-submissions/[submissionId]/reject", () => {
     const data = await res.json();
     expect(data.ok).toBe(true);
   });
+
+  it("devuelve 500 cuando update rechaza", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.projectSubmission.findUnique).mockResolvedValue({
+      id: "s1",
+      status: "PENDING",
+    } as never);
+    vi.mocked(prisma.projectSubmission.update).mockRejectedValue(new Error("DB error"));
+    const res = await POST(new Request("https://x.com"), {
+      params: Promise.resolve({ submissionId: "s1" }),
+    });
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toContain("Error al rechazar");
+  });
 });

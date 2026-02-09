@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET, POST } from "@/app/api/admin/modules/[moduleId]/submodules/route";
 
+const { submodulesOpenaiCreateMock } = vi.hoisted(() => ({
+  submodulesOpenaiCreateMock: vi.fn().mockResolvedValue({
+    choices: [{ message: { content: "**Objetivos**\n- Item.\n\n**Contenido**\nTexto." } }],
+  }),
+}));
 vi.mock("@/lib/api-auth", () => ({ getAdminSession: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -11,13 +16,7 @@ vi.mock("@/lib/prisma", () => ({
 vi.mock("@/lib/app-config", () => ({ getOpenAIModel: vi.fn().mockResolvedValue("gpt-4o-mini") }));
 vi.mock("openai", () => ({
   default: class MockOpenAI {
-    chat = {
-      completions: {
-        create: vi.fn().mockResolvedValue({
-          choices: [{ message: { content: "**Objetivos**\n- Item.\n\n**Contenido**\nTexto." } }],
-        }),
-      },
-    };
+    chat = { completions: { create: submodulesOpenaiCreateMock } };
   },
 }));
 
@@ -128,5 +127,51 @@ describe("POST /api/admin/modules/[moduleId]/submodules", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.title).toBeDefined();
+  });
+
+  it("crea submódulo con description null cuando OpenAI falla (L90-91 catch)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      _count: { lessons: 0 },
+    } as never);
+    submodulesOpenaiCreateMock.mockRejectedValueOnce(new Error("OpenAI rate limit"));
+    vi.mocked(prisma.submodule.create).mockResolvedValue({
+      id: "s1",
+      moduleId: "m1",
+      title: "Sub",
+      description: null,
+      order: 0,
+      createdAt: new Date(),
+    } as never);
+    process.env.OPENAI_API_KEY = "sk-test";
+    const res = await POST(
+      new Request("https://x.com", { method: "POST", body: JSON.stringify({ title: "Sub" }) }),
+      { params: Promise.resolve({ moduleId: "m1" }) }
+    );
+    expect(res.status).toBe(200);
+    expect(prisma.submodule.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ description: null }),
+      })
+    );
+  });
+
+  it("devuelve 500 cuando prisma.submodule.create rechaza (L108-110)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      _count: { lessons: 0 },
+    } as never);
+    vi.mocked(prisma.submodule.create).mockRejectedValue(new Error("DB error"));
+    const res = await POST(
+      new Request("https://x.com", { method: "POST", body: JSON.stringify({ title: "Sub" }) }),
+      { params: Promise.resolve({ moduleId: "m1" }) }
+    );
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toContain("Error al crear el submódulo");
   });
 });

@@ -110,4 +110,22 @@ describe("GET /api/admin/project-submissions/[submissionId]/download", () => {
     expect(res.headers.get("Content-Disposition")).toContain("attachment");
     expect(res.headers.get("Content-Disposition")).toContain("submission.zip");
   });
+
+  it("devuelve 500 cuando readFileSync lanza", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.projectSubmission.findUnique).mockResolvedValue({
+      id: "s1",
+      submissionType: "FILE",
+      filePath: "uploads/submission.zip",
+    } as never);
+    vi.mocked(fs.readFileSync).mockImplementation(() => {
+      throw new Error("ENOENT");
+    });
+    const res = await GET(new Request("https://x.com"), {
+      params: Promise.resolve({ submissionId: "s1" }),
+    });
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toContain("Error al descargar");
+  });
 });

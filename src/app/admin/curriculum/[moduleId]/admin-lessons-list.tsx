@@ -654,7 +654,7 @@ export function AdminLessonsList({
                 type="number"
                 value={formOrder}
                 onChange={(e) =>
-                  setFormOrder(parseInt(e.target.value, 10) || 0)
+                  setFormOrder(Number.parseInt(e.target.value, 10) || 0)
                 }
                 className="mt-1 w-full max-w-[120px] rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
               />

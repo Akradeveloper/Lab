@@ -53,6 +53,33 @@ describe("PATCH /api/admin/modules/[moduleId]/lessons/reorder", () => {
     expect(data.error).toContain("orderedIds");
   });
 
+  it("devuelve 400 cuando orderedIds incluye un no-string (L25)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const res = await PATCH(
+      new Request("https://x.com", { method: "PATCH", body: JSON.stringify({ orderedIds: ["l1", 2] }) }),
+      { params: Promise.resolve({ moduleId: "m1" }) }
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("orderedIds");
+  });
+
+  it("devuelve 400 cuando algún id no pertenece al módulo (L43)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      _count: { submodules: 0 },
+    } as never);
+    vi.mocked(prisma.lesson.findMany).mockResolvedValue([{ id: "l1" }] as never);
+    const res = await PATCH(
+      new Request("https://x.com", { method: "PATCH", body: JSON.stringify({ orderedIds: ["l1", "l2"] }) }),
+      { params: Promise.resolve({ moduleId: "m1" }) }
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/IDs|módulo|existen/);
+  });
+
   it("devuelve 404 si el módulo no existe", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
     vi.mocked(prisma.module.findUnique).mockResolvedValue(null);
@@ -93,5 +120,22 @@ describe("PATCH /api/admin/modules/[moduleId]/lessons/reorder", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.ok).toBe(true);
+  });
+
+  it("devuelve 500 cuando la transacción rechaza", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      _count: { submodules: 0 },
+    } as never);
+    vi.mocked(prisma.lesson.findMany).mockResolvedValue([{ id: "l1" }] as never);
+    vi.mocked(prisma.$transaction).mockRejectedValue(new Error("DB error"));
+    const res = await PATCH(
+      new Request("https://x.com", { method: "PATCH", body: JSON.stringify({ orderedIds: ["l1"] }) }),
+      { params: Promise.resolve({ moduleId: "m1" }) }
+    );
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toContain("Error al aplicar el orden");
   });
 });

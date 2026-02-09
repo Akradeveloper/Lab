@@ -73,4 +73,36 @@ describe("PATCH /api/admin/submodules/[submoduleId]/lessons/reorder", () => {
     const data = await res.json();
     expect(data.ok).toBe(true);
   });
+
+  it("devuelve 400 cuando orderedIds incluye un no-string (L25)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const res = await PATCH(
+      new Request("https://x.com", { method: "PATCH", body: JSON.stringify({ orderedIds: ["l1", 2] }) }),
+      { params: Promise.resolve({ submoduleId: "s1" }) }
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("devuelve 400 cuando algún id no pertenece al submódulo (L39)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.submodule.findUnique).mockResolvedValue({ id: "s1" } as never);
+    vi.mocked(prisma.lesson.findMany).mockResolvedValue([{ id: "l1" }] as never);
+    const res = await PATCH(
+      new Request("https://x.com", { method: "PATCH", body: JSON.stringify({ orderedIds: ["l1", "l2"] }) }),
+      { params: Promise.resolve({ submoduleId: "s1" }) }
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("devuelve 500 cuando $transaction rechaza (L53-54)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.submodule.findUnique).mockResolvedValue({ id: "s1" } as never);
+    vi.mocked(prisma.lesson.findMany).mockResolvedValue([{ id: "l1" }] as never);
+    vi.mocked(prisma.$transaction).mockRejectedValue(new Error("DB error"));
+    const res = await PATCH(
+      new Request("https://x.com", { method: "PATCH", body: JSON.stringify({ orderedIds: ["l1"] }) }),
+      { params: Promise.resolve({ submoduleId: "s1" }) }
+    );
+    expect(res.status).toBe(500);
+  });
 });

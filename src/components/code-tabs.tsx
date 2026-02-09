@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import DOMPurify from "isomorphic-dompurify";
 import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
 import python from "highlight.js/lib/languages/python";
@@ -61,9 +62,9 @@ function highlightCode(code: string, language: string): string {
     // Fallback: sin highlighting
   }
   return code
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
 
 export function CodeTabs({ blocks }: CodeTabsProps) {
@@ -141,7 +142,10 @@ export function CodeTabs({ blocks }: CodeTabsProps) {
           <code
             className={`hljs block font-mono text-sm text-foreground whitespace-pre language-${activeBlock.language}`}
             dangerouslySetInnerHTML={{
-              __html: highlightCode(activeBlock.code, activeBlock.language),
+              __html: DOMPurify.sanitize(
+                highlightCode(activeBlock.code, activeBlock.language),
+                { ALLOWED_TAGS: ["span"], ALLOWED_ATTR: ["class"] },
+              ),
             }}
           />
         </pre>

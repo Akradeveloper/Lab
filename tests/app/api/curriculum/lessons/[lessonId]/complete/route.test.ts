@@ -114,5 +114,67 @@ describe("POST /api/curriculum/lessons/[lessonId]/complete", () => {
     const data = await res.json();
     expect(data.ok).toBe(true);
     expect(data.alreadyCompleted).toBeUndefined();
+    expect(data.certificateId).toBe("cert1");
+  });
+
+  it("devuelve 200 con certificateId cuando ya existía certificado del módulo", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(sessionAlumno as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      lessonType: "standard",
+      moduleId: "m1",
+      submodule: null,
+    } as never);
+    vi.mocked(prisma.progress.findFirst).mockResolvedValue(null);
+    vi.mocked(prisma.lesson.findMany).mockResolvedValue([{ id: "l1" }] as never);
+    vi.mocked(prisma.progress.findMany).mockResolvedValue([{ lessonId: "l1" }] as never);
+    vi.mocked(prisma.certificate.findUnique).mockResolvedValue({ id: "existing-cert" } as never);
+    const res = await POST(new Request("https://x.com"), {
+      params: Promise.resolve({ lessonId: "l1" }),
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.ok).toBe(true);
+    expect(data.certificateId).toBe("existing-cert");
+  });
+
+  it("devuelve 500 cuando progress.create lanza", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(sessionAlumno as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      lessonType: "standard",
+      moduleId: "m1",
+      submodule: null,
+    } as never);
+    vi.mocked(prisma.progress.findFirst).mockResolvedValue(null);
+    vi.mocked(prisma.progress.create).mockRejectedValue(new Error("DB error"));
+    const res = await POST(new Request("https://x.com"), {
+      params: Promise.resolve({ lessonId: "l1" }),
+    });
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toBe("Error al guardar el progreso");
+  });
+
+  it("devuelve 200 sin certificateId cuando el bloque de certificado lanza (catch interno)", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(sessionAlumno as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      lessonType: "standard",
+      moduleId: "m1",
+      submodule: null,
+    } as never);
+    vi.mocked(prisma.progress.findFirst).mockResolvedValue(null);
+    vi.mocked(prisma.lesson.findMany).mockResolvedValue([{ id: "l1" }] as never);
+    vi.mocked(prisma.progress.findMany).mockResolvedValue([{ lessonId: "l1" }] as never);
+    vi.mocked(prisma.certificate.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.certificate.create).mockRejectedValue(new Error("Cert DB error"));
+    const res = await POST(new Request("https://x.com"), {
+      params: Promise.resolve({ lessonId: "l1" }),
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.ok).toBe(true);
+    expect(data.certificateId).toBeNull();
   });
 });

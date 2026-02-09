@@ -27,7 +27,7 @@ vi.mock("openai", () => ({
 }));
 
 const { getAdminSession } = await import("@/lib/api-auth");
-const { getConfigValue } = await import("@/lib/app-config");
+const { getConfigValue, getAppConfigNumber } = await import("@/lib/app-config");
 const { prisma } = await import("@/lib/prisma");
 
 const adminSession = {
@@ -69,6 +69,30 @@ describe("GET /api/admin/config", () => {
     expect(data.openai_model).toBe("gpt-4o-mini");
     expect(data.min_lessons_testimonial).toBe(5);
     expect(data.testimonial_max_text).toBe(500);
+  });
+
+  it("devuelve 500 cuando getConfigValue lanza", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(getConfigValue).mockRejectedValueOnce(new Error("DB error"));
+    const res = await GET();
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toContain("configuración");
+  });
+
+  it("ejecuta el bloque catch completo del GET cuando getConfigValue lanza (NODE_ENV no production)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(getConfigValue).mockRejectedValueOnce(new Error("DB error"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "development");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await GET();
+      expect(res.status).toBe(500);
+      expect(consoleSpy).toHaveBeenCalledWith("Error leyendo config:", expect.any(Error));
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
   });
 });
 
@@ -139,6 +163,25 @@ describe("PATCH /api/admin/config", () => {
     expect(data.error).toContain("Modelo no permitido");
   });
 
+  it("devuelve 400 cuando testFirst true y OPENAI_API_KEY no está configurada", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const orig = process.env.OPENAI_API_KEY;
+    process.env.OPENAI_API_KEY = "";
+    const res = await PATCH(
+      new Request("https://x.com", {
+        method: "PATCH",
+        body: JSON.stringify({
+          updates: { openai_model: "gpt-4o-mini" },
+          testFirst: true,
+        }),
+      })
+    );
+    process.env.OPENAI_API_KEY = orig;
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("OPENAI_API_KEY no configurada");
+  });
+
   it("devuelve 200 con updates de claves numéricas", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
     const res = await PATCH(
@@ -180,6 +223,8 @@ describe("PATCH /api/admin/config", () => {
 
   it("devuelve 200 con openai_model y testFirst true (mock OpenAI)", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const orig = process.env.OPENAI_API_KEY;
+    process.env.OPENAI_API_KEY = "sk-test";
     configOpenaiCreateMock.mockResolvedValueOnce({ choices: [{ message: { content: "ok" } }] });
     const res = await PATCH(
       new Request("https://x.com", {
@@ -190,9 +235,54 @@ describe("PATCH /api/admin/config", () => {
         }),
       })
     );
+    process.env.OPENAI_API_KEY = orig;
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.ok).toBe(true);
+  });
+
+  it("devuelve 400 cuando testFirst true y OpenAI lanza", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const orig = process.env.OPENAI_API_KEY;
+    process.env.OPENAI_API_KEY = "sk-test";
+    configOpenaiCreateMock.mockRejectedValueOnce(new Error("Rate limit"));
+    const res = await PATCH(
+      new Request("https://x.com", {
+        method: "PATCH",
+        body: JSON.stringify({
+          updates: { openai_model: "gpt-4o-mini" },
+          testFirst: true,
+        }),
+      })
+    );
+    process.env.OPENAI_API_KEY = orig;
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("prueba del modelo falló");
+    expect(data.detail).toBe("Rate limit");
+  });
+
+  it("devuelve 400 cuando la suma de límites de contenido supera la capacidad del modelo", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(getAppConfigNumber).mockImplementation(async (key: string) => {
+      if (key === "max_prev_content_length") return 300000;
+      if (key === "max_suggest_content_length") return 300000;
+      if (key === "max_prev_title_length") return 200000;
+      return 10;
+    });
+    const res = await PATCH(
+      new Request("https://x.com", {
+        method: "PATCH",
+        body: JSON.stringify({
+          updates: {
+            max_prev_content_length: 5000,
+          },
+        }),
+      })
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/límites de contenido|superan|capacidad/);
   });
 
   it("devuelve 500 cuando upsert falla", async () => {
@@ -207,5 +297,46 @@ describe("PATCH /api/admin/config", () => {
     expect(res.status).toBe(500);
     const data = await res.json();
     expect(data.error).toContain("configuración");
+  });
+
+  it("devuelve 200 con actualización de límites de contenido cuando la suma no supera capacidad del modelo", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(getAppConfigNumber).mockImplementation(async (key: string) => {
+      if (key === "max_prev_content_length") return 2000;
+      if (key === "max_suggest_content_length") return 2000;
+      if (key === "max_prev_title_length") return 200;
+      return 10;
+    });
+    const res = await PATCH(
+      new Request("https://x.com", {
+        method: "PATCH",
+        body: JSON.stringify({
+          updates: { max_prev_content_length: 2000 },
+        }),
+      })
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.ok).toBe(true);
+  });
+
+  it("ejecuta el bloque catch del PATCH cuando upsert falla (NODE_ENV no production)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.appConfig.upsert).mockRejectedValueOnce(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "development");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await PATCH(
+        new Request("https://x.com", {
+          method: "PATCH",
+          body: JSON.stringify({ updates: { default_exercise_count: 5 } }),
+        })
+      );
+      expect(res.status).toBe(500);
+      expect(consoleSpy).toHaveBeenCalledWith("Error actualizando config:", expect.any(Error));
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
   });
 });

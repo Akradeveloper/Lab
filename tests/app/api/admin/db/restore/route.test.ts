@@ -110,6 +110,21 @@ describe("POST /api/admin/db/restore", () => {
     expect(data.error).toContain("JSON válido");
   });
 
+  it("acepta archivo con contenido JSON y nombre sin .json (MySQL, cubre L42 isJson)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(isMySQL).mockReturnValue(true);
+    vi.mocked(restoreFromJson).mockResolvedValue(undefined);
+    const json = JSON.stringify({ schemaVersion: 1, data: {} });
+    const form = new FormData();
+    form.append("file", new File([json], "backup.txt", { type: "application/octet-stream" }));
+    const req = new Request("https://x.com", { method: "POST", body: form });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(restoreFromJson).toHaveBeenCalled();
+  });
+
   it("devuelve 500 cuando falla restoreFromJson o writeFileSync", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
     vi.mocked(isMySQL).mockReturnValue(true);
@@ -139,5 +154,22 @@ describe("POST /api/admin/db/restore", () => {
     expect(res.status).toBe(500);
     const data = await res.json();
     expect(data.error).toContain("write failed");
+  });
+
+  it("devuelve 500 cuando el catch recibe valor no Error (SQLite path)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(isMySQL).mockReturnValue(false);
+    vi.mocked(fs.default.writeFileSync).mockImplementation(() => {
+      throw "string error";
+    });
+    const sqliteHeader = Buffer.alloc(16);
+    Buffer.from("SQLite format 3\0", "utf8").copy(sqliteHeader);
+    const form = new FormData();
+    form.append("file", new Blob([sqliteHeader]), "backup.db");
+    const req = new Request("https://x.com", { method: "POST", body: form });
+    const res = await POST(req);
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toBe("Error al restaurar la BD");
   });
 });

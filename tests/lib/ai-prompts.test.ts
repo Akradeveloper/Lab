@@ -121,6 +121,21 @@ describe("ai-prompts", () => {
       });
       expect(r).toContain("primera lección");
     });
+
+    it("incluye submoduleTitle, submoduleDescription y moduleDescription cuando están definidos", () => {
+      const r = buildLessonUserPrompt({
+        moduleTitle: "Mod",
+        submoduleTitle: "SubMod",
+        submoduleDescription: "Desc submódulo",
+        moduleDescription: "Desc módulo",
+        existingLessons: [{ title: "L1", order: 1, content: "C1" }],
+        topic: "Tema",
+      });
+      expect(r).toContain('Submódulo: "SubMod"');
+      expect(r).toContain("Descripción del submódulo: Desc submódulo");
+      expect(r).toContain("Descripción del módulo: Desc módulo");
+      expect(r).toContain("submódulo");
+    });
   });
 
   describe("buildExerciseSystemPrompt", () => {
@@ -176,6 +191,20 @@ describe("ai-prompts", () => {
       });
       expect(r).toContain("ninguna todavía");
     });
+
+    it("incluye submoduleTitle, submoduleDescription y moduleDescription y usa 'submódulo' cuando submoduleTitle está definido", () => {
+      const r = buildSuggestLessonsPrompt({
+        moduleTitle: "Mod",
+        submoduleTitle: "Sub",
+        submoduleDescription: "Desc sub",
+        moduleDescription: "Desc mod",
+        existingLessons: [{ title: "L1", order: 1 }],
+      });
+      expect(r).toContain('Submódulo: "Sub"');
+      expect(r).toContain("Descripción del submódulo: Desc sub");
+      expect(r).toContain("Descripción del módulo: Desc mod");
+      expect(r).toContain("submódulo");
+    });
   });
 
   describe("buildSuggestExercisesPrompt", () => {
@@ -189,6 +218,43 @@ describe("ai-prompts", () => {
         { maxSuggestContentLength: 100 }
       );
       expect(r).toContain("y".repeat(100) + "...");
+    });
+
+    it("trunca contenido con límite por defecto cuando no se pasa limits", () => {
+      const r = buildSuggestExercisesPrompt({
+        lessonTitle: "L",
+        lessonContent: "z".repeat(2500),
+        previousLessons: [],
+      });
+      expect(r).toContain("z".repeat(2000) + "...");
+    });
+
+    it("no trunca cuando lessonContent.length <= maxContent (incluye contenido completo sin ...)", () => {
+      const shortContent = "Contenido breve de la lección.";
+      const r = buildSuggestExercisesPrompt(
+        {
+          lessonTitle: "Lección",
+          lessonContent: shortContent,
+          previousLessons: [],
+        },
+        { maxSuggestContentLength: 2000 }
+      );
+      expect(r).toContain(shortContent);
+      expect(r).not.toContain(shortContent + "...");
+    });
+
+    it("no trunca cuando lessonContent.length es exactamente maxContent (rama else)", () => {
+      const exactContent = "x".repeat(2000);
+      const r = buildSuggestExercisesPrompt(
+        {
+          lessonTitle: "Lección",
+          lessonContent: exactContent,
+          previousLessons: [],
+        },
+        { maxSuggestContentLength: 2000 }
+      );
+      expect(r).toContain(exactContent);
+      expect(r).not.toContain(exactContent + "...");
     });
   });
 
@@ -211,6 +277,19 @@ describe("ai-prompts", () => {
       expect(r).toContain("Lección 1");
       expect(r).toContain("Contenido 1");
       expect(r).toContain("Mod");
+    });
+
+    it("incluye submoduleTitle, submoduleDescription y moduleDescription cuando están definidos", () => {
+      const r = buildProjectUserPrompt({
+        moduleTitle: "Mod",
+        submoduleTitle: "SubProy",
+        submoduleDescription: "Desc sub",
+        moduleDescription: "Desc mod",
+        previousLessons: [{ title: "L1", order: 1, content: "C1" }],
+      });
+      expect(r).toContain('Submódulo: "SubProy"');
+      expect(r).toContain("Descripción del submódulo: Desc sub");
+      expect(r).toContain("Descripción del módulo: Desc mod");
     });
   });
 });

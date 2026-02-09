@@ -86,9 +86,14 @@ export function CurriculumSidebar({
 
       {/* Overlay móvil */}
       {open && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+        <button
+          type="button"
+          aria-label="Cerrar menú"
+          className="fixed inset-0 z-30 cursor-default border-0 bg-black/50 p-0 lg:hidden"
           onClick={() => setOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setOpen(false);
+          }}
         />
       )}
 

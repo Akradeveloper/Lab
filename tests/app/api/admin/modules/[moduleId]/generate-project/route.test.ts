@@ -9,15 +9,12 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 vi.mock("@/lib/app-config", () => ({ getOpenAIModel: vi.fn().mockResolvedValue("gpt-4o-mini") }));
+const genProjectCreateMock = vi.fn().mockResolvedValue({
+  choices: [{ message: { content: JSON.stringify({ title: "Proyecto", content: "# Instrucciones" }) } }],
+});
 vi.mock("openai", () => ({
   default: class MockOpenAI {
-    chat = {
-      completions: {
-        create: vi.fn().mockResolvedValue({
-          choices: [{ message: { content: JSON.stringify({ title: "Proyecto", content: "# Instrucciones" }) } }],
-        }),
-      },
-    };
+    chat = { completions: { create: genProjectCreateMock } };
   },
 }));
 
@@ -37,6 +34,20 @@ describe("POST /api/admin/modules/[moduleId]/generate-project", () => {
     vi.mocked(prisma.module.findUnique).mockResolvedValue(null);
     vi.mocked(prisma.lesson.findMany).mockResolvedValue([]);
     process.env = { ...originalEnv, OPENAI_API_KEY: "sk-test" };
+  });
+
+  it("devuelve 503 cuando OPENAI_API_KEY no está configurada (L24)", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.resetModules();
+    const { POST: POSTHandler } = await import("@/app/api/admin/modules/[moduleId]/generate-project/route");
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const res = await POSTHandler(new Request("https://x.com"), {
+      params: Promise.resolve({ moduleId: "m1" }),
+    });
+    vi.unstubAllEnvs();
+    expect(res.status).toBe(503);
+    const data = await res.json();
+    expect(data.error).toMatch(/OPENAI_API_KEY|configurada/);
   });
 
   it("devuelve 403 si no hay sesión admin", async () => {
@@ -112,5 +123,67 @@ describe("POST /api/admin/modules/[moduleId]/generate-project", () => {
     const data = await res.json();
     expect(data.title).toBeDefined();
     expect(data.content).toBeDefined();
+  });
+
+  it("devuelve 500 cuando OpenAI rechaza", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      description: null,
+      _count: { submodules: 0 },
+    } as never);
+    vi.mocked(prisma.lesson.findMany).mockResolvedValue([
+      { title: "L1", order: 0, content: "Contenido" },
+    ] as never);
+    genProjectCreateMock.mockRejectedValueOnce(new Error("API error"));
+    const res = await POST(new Request("https://x.com"), {
+      params: Promise.resolve({ moduleId: "m1" }),
+    });
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toContain("Error al generar el proyecto con IA");
+  });
+
+  it("devuelve 502 cuando la IA no devuelve content (L110)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      description: null,
+      _count: { submodules: 0 },
+    } as never);
+    vi.mocked(prisma.lesson.findMany).mockResolvedValue([
+      { title: "L1", order: 0, content: "Contenido" },
+    ] as never);
+    genProjectCreateMock.mockResolvedValueOnce({ choices: [{ message: {} }] });
+    const res = await POST(new Request("https://x.com"), {
+      params: Promise.resolve({ moduleId: "m1" }),
+    });
+    expect(res.status).toBe(502);
+    const data = await res.json();
+    expect(data.error).toContain("contenido");
+  });
+
+  it("devuelve 502 cuando la respuesta de la IA no es JSON válido (L120 catch)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      description: null,
+      _count: { submodules: 0 },
+    } as never);
+    vi.mocked(prisma.lesson.findMany).mockResolvedValue([
+      { title: "L1", order: 0, content: "Contenido" },
+    ] as never);
+    genProjectCreateMock.mockResolvedValueOnce({
+      choices: [{ message: { content: "not valid json" } }],
+    });
+    const res = await POST(new Request("https://x.com"), {
+      params: Promise.resolve({ moduleId: "m1" }),
+    });
+    expect(res.status).toBe(502);
+    const data = await res.json();
+    expect(data.error).toMatch(/JSON|válido/);
   });
 });

@@ -43,6 +43,16 @@ describe("POST /api/admin/submodules/[submoduleId]/suggest-lessons-order", () =>
     expect(res.status).toBe(403);
   });
 
+  it("devuelve 400 si submoduleId está vacío (L29)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const res = await POST(new Request("https://x.com"), {
+      params: Promise.resolve({ submoduleId: "" }),
+    });
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("submódulo");
+  });
+
   it("devuelve 404 si el submódulo no existe", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
     vi.mocked(prisma.submodule.findUnique).mockResolvedValue(null);
@@ -153,5 +163,27 @@ describe("POST /api/admin/submodules/[submoduleId]/suggest-lessons-order", () =>
     expect(res.status).toBe(500);
     const data = await res.json();
     expect(data.error).toContain("orden");
+  });
+
+  it("devuelve 503 cuando OPENAI_API_KEY no está configurada", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.resetModules();
+    const { POST: POSTHandler } = await import("@/app/api/admin/submodules/[submoduleId]/suggest-lessons-order/route");
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.submodule.findUnique).mockResolvedValue({
+      id: "s1",
+      title: "Sub",
+      description: null,
+      module: { title: "M1", description: null },
+    } as never);
+    vi.mocked(prisma.lesson.findMany).mockResolvedValue([
+      { id: "l1", title: "L1", content: "", difficulty: null },
+      { id: "l2", title: "L2", content: "", difficulty: null },
+    ] as never);
+    const res = await POSTHandler(new Request("https://x.com"), {
+      params: Promise.resolve({ submoduleId: "s1" }),
+    });
+    vi.unstubAllEnvs();
+    expect(res.status).toBe(503);
   });
 });

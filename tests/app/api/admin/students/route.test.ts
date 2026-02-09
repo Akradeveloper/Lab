@@ -72,4 +72,26 @@ describe("GET /api/admin/students", () => {
     expect(data[0].progress).toHaveLength(1);
     expect(data[0].lastActivity).toBeDefined();
   });
+
+  it("devuelve 200 con alumno sin progreso (lastActivity null)", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "admin1", email: "admin@b.com", role: "ADMIN", name: "Admin" },
+      expires: "",
+    } as never);
+    vi.mocked(prisma.user.findMany).mockResolvedValue([
+      {
+        id: "u2",
+        name: "Alumno Sin Progreso",
+        email: "sin@test.com",
+        createdAt: new Date("2025-01-01"),
+        progress: [],
+      },
+    ] as never);
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toHaveLength(1);
+    expect(data[0].lastActivity).toBeNull();
+    expect(data[0].lessonsCompleted).toBe(0);
+  });
 });

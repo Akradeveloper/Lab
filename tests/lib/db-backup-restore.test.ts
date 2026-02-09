@@ -97,5 +97,52 @@ describe("db-backup-restore", () => {
       expect(deleteMany).toHaveBeenCalled();
       expect(createMany).toHaveBeenCalled();
     });
+
+    it("ejecuta createMany para todas las tablas cuando data tiene arrays no vacíos", async () => {
+      const userCreateMany = vi.fn().mockResolvedValue(undefined);
+      const moduleCreateMany = vi.fn().mockResolvedValue(undefined);
+      const submoduleCreateMany = vi.fn().mockResolvedValue(undefined);
+      const lessonCreateMany = vi.fn().mockResolvedValue(undefined);
+      const exerciseCreateMany = vi.fn().mockResolvedValue(undefined);
+      const progressCreateMany = vi.fn().mockResolvedValue(undefined);
+      const lessonCheckCreateMany = vi.fn().mockResolvedValue(undefined);
+      const exerciseAttemptCreateMany = vi.fn().mockResolvedValue(undefined);
+      const tx = {
+        exerciseAttempt: { deleteMany: vi.fn().mockResolvedValue(undefined), createMany: exerciseAttemptCreateMany },
+        lessonCheckAttempt: { deleteMany: vi.fn().mockResolvedValue(undefined), createMany: lessonCheckCreateMany },
+        progress: { deleteMany: vi.fn().mockResolvedValue(undefined), createMany: progressCreateMany },
+        exercise: { deleteMany: vi.fn().mockResolvedValue(undefined), createMany: exerciseCreateMany },
+        lesson: { deleteMany: vi.fn().mockResolvedValue(undefined), createMany: lessonCreateMany },
+        submodule: { deleteMany: vi.fn().mockResolvedValue(undefined), createMany: submoduleCreateMany },
+        module: { deleteMany: vi.fn().mockResolvedValue(undefined), createMany: moduleCreateMany },
+        user: { deleteMany: vi.fn().mockResolvedValue(undefined), createMany: userCreateMany },
+      };
+      const prisma = {
+        $transaction: vi.fn((fn: (t: typeof tx) => Promise<void>) => fn(tx)),
+      };
+      const backup: BackupData = {
+        schemaVersion: BACKUP_SCHEMA_VERSION,
+        exportedAt: new Date().toISOString(),
+        data: {
+          User: [{ id: "u1", email: "e@e.com", name: "U", passwordHash: "h", role: "ALUMNO", createdAt: new Date().toISOString() }],
+          Module: [{ id: "m1", title: "M", description: null, order: 0, createdAt: new Date().toISOString() }],
+          Submodule: [{ id: "s1", moduleId: "m1", title: "S", description: null, order: 0, createdAt: new Date().toISOString() }],
+          Lesson: [{ id: "l1", title: "L", content: "C", order: 0, moduleId: "m1", submoduleId: null }],
+          Exercise: [{ id: "ex1", lessonId: "l1", type: "TRUE_FALSE", question: "Q", correctAnswer: "true", order: 0 }],
+          Progress: [{ id: "p1", userId: "u1", courseId: "m1", lessonId: "l1", completedAt: new Date().toISOString() }],
+          LessonCheckAttempt: [{ id: "lc1", userId: "u1", lessonId: "l1", allCorrect: true }],
+          ExerciseAttempt: [{ id: "ea1", userId: "u1", exerciseId: "ex1", lessonId: "l1", correct: true }],
+        },
+      };
+      await restoreFromJson(prisma as never, backup);
+      expect(userCreateMany).toHaveBeenCalled();
+      expect(moduleCreateMany).toHaveBeenCalled();
+      expect(submoduleCreateMany).toHaveBeenCalled();
+      expect(lessonCreateMany).toHaveBeenCalled();
+      expect(exerciseCreateMany).toHaveBeenCalled();
+      expect(progressCreateMany).toHaveBeenCalled();
+      expect(lessonCheckCreateMany).toHaveBeenCalled();
+      expect(exerciseAttemptCreateMany).toHaveBeenCalled();
+    });
   });
 });

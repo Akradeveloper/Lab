@@ -9,15 +9,12 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 vi.mock("@/lib/app-config", () => ({ getOpenAIModel: vi.fn().mockResolvedValue("gpt-4o-mini") }));
+const suggestLessonsCreateMock = vi.fn().mockResolvedValue({
+  choices: [{ message: { content: JSON.stringify({ suggestions: ["Lección A", "Lección B"] }) } }],
+});
 vi.mock("openai", () => ({
   default: class MockOpenAI {
-    chat = {
-      completions: {
-        create: vi.fn().mockResolvedValue({
-          choices: [{ message: { content: JSON.stringify({ suggestions: ["Lección A", "Lección B"] }) } }],
-        }),
-      },
-    };
+    chat = { completions: { create: suggestLessonsCreateMock } };
   },
 }));
 
@@ -92,5 +89,80 @@ describe("GET /api/admin/modules/[moduleId]/suggest-lessons", () => {
     const data = await res.json();
     expect(data.suggestions).toBeDefined();
     expect(Array.isArray(data.suggestions)).toBe(true);
+  });
+
+  it("devuelve 503 con suggestions [] cuando OPENAI_API_KEY no está configurada", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.resetModules();
+    const { GET: GETHandler } = await import("@/app/api/admin/modules/[moduleId]/suggest-lessons/route");
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      description: null,
+      _count: { submodules: 0 },
+    } as never);
+    const res = await GETHandler(new Request("https://x.com"), {
+      params: Promise.resolve({ moduleId: "m1" }),
+    });
+    vi.unstubAllEnvs();
+    expect(res.status).toBe(503);
+    const data = await res.json();
+    expect(data.suggestions).toEqual([]);
+    expect(data.error).toContain("OPENAI_API_KEY no configurada");
+  });
+
+  it("devuelve 200 con suggestions [] cuando completion no trae content", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      description: null,
+      _count: { submodules: 0 },
+    } as never);
+    suggestLessonsCreateMock.mockResolvedValueOnce({ choices: [{ message: {} }] });
+    const res = await GET(new Request("https://x.com"), {
+      params: Promise.resolve({ moduleId: "m1" }),
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.suggestions).toEqual([]);
+  });
+
+  it("devuelve 200 con suggestions [] cuando content no es JSON válido (L78 catch)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      description: null,
+      _count: { submodules: 0 },
+    } as never);
+    suggestLessonsCreateMock.mockResolvedValueOnce({
+      choices: [{ message: { content: "not valid json {{{" } }],
+    });
+    const res = await GET(new Request("https://x.com"), {
+      params: Promise.resolve({ moduleId: "m1" }),
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.suggestions).toEqual([]);
+  });
+
+  it("devuelve 500 con suggestions [] cuando OpenAI rechaza", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      description: null,
+      _count: { submodules: 0 },
+    } as never);
+    suggestLessonsCreateMock.mockRejectedValueOnce(new Error("API error"));
+    const res = await GET(new Request("https://x.com"), {
+      params: Promise.resolve({ moduleId: "m1" }),
+    });
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.suggestions).toEqual([]);
+    expect(data.error).toContain("Error al obtener sugerencias");
   });
 });

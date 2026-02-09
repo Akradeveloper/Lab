@@ -246,4 +246,280 @@ describe("POST /api/admin/lessons/[lessonId]/generate-exercises", () => {
     const data = await res.json();
     expect(data.error).toMatch(/OPENAI_API_KEY|configuración/);
   });
+
+  it("devuelve 502 cuando la respuesta de la IA no es JSON válido", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      title: "Lección",
+      content: "Contenido",
+    } as never);
+    openaiCreateMock.mockResolvedValueOnce({
+      choices: [{ message: { content: "not valid json {{{" } }],
+    });
+    const res = await POST(
+      new Request("https://x.com", { method: "POST", body: JSON.stringify({}) }),
+      { params: Promise.resolve({ lessonId: "l1" }) }
+    );
+    expect(res.status).toBe(502);
+    const data = await res.json();
+    expect(data.error).toContain("Respuesta de la IA no es JSON válido");
+  });
+
+  it("usa defaults cuando body no es JSON válido (L102 catch)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      title: "Lección",
+      content: "Contenido",
+    } as never);
+    vi.mocked(prisma.exercise.create).mockResolvedValue({
+      id: "ex1",
+      lessonId: "l1",
+      type: "TRUE_FALSE",
+      question: "Q",
+      options: "[]",
+      correctAnswer: "true",
+      order: 0,
+      createdAt: new Date(),
+    } as never);
+    const res = await POST(
+      new Request("https://x.com", { method: "POST", body: "not json", headers: { "Content-Type": "application/json" } }),
+      { params: Promise.resolve({ lessonId: "l1" }) }
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data)).toBe(true);
+  });
+
+  it("devuelve 200 con MULTIPLE_CHOICE con options todos string (L65 isValidGenerated)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      title: "Lección",
+      content: "Contenido",
+    } as never);
+    openaiCreateMock.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              exercises: [
+                { type: "MULTIPLE_CHOICE", question: "Elige una", options: ["Opción A", "Opción B", "Opción C"], correctAnswer: 1 },
+              ],
+            }),
+          },
+        },
+      ],
+    });
+    vi.mocked(prisma.exercise.create).mockResolvedValue({
+      id: "ex1",
+      lessonId: "l1",
+      type: "MULTIPLE_CHOICE",
+      question: "Elige una",
+      options: '["Opción A","Opción B","Opción C"]',
+      correctAnswer: "1",
+      order: 0,
+      createdAt: new Date(),
+    } as never);
+    const res = await POST(
+      new Request("https://x.com", { method: "POST", body: JSON.stringify({}) }),
+      { params: Promise.resolve({ lessonId: "l1" }) }
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.length).toBe(1);
+    expect(data[0].type).toBe("MULTIPLE_CHOICE");
+  });
+
+  it("devuelve 200 con TRUE_FALSE y correctAnswer boolean (L86)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      title: "Lección",
+      content: "Contenido",
+    } as never);
+    openaiCreateMock.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              exercises: [
+                { type: "TRUE_FALSE", question: "¿Es falso?", correctAnswer: false },
+              ],
+            }),
+          },
+        },
+      ],
+    });
+    vi.mocked(prisma.exercise.create).mockResolvedValue({
+      id: "ex1",
+      lessonId: "l1",
+      type: "TRUE_FALSE",
+      question: "¿Es falso?",
+      options: '["Verdadero","Falso"]',
+      correctAnswer: "false",
+      order: 0,
+      createdAt: new Date(),
+    } as never);
+    const res = await POST(
+      new Request("https://x.com", { method: "POST", body: JSON.stringify({}) }),
+      { params: Promise.resolve({ lessonId: "l1" }) }
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.length).toBe(1);
+    expect(data[0].correctAnswer).toBe("false");
+  });
+
+  it("devuelve 200 con ejercicio CODE usando ex.difficulty cuando no se envía codeDifficulty", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      title: "Lección",
+      content: "Contenido",
+    } as never);
+    const codeExercise = {
+      type: "CODE",
+      question: "Implementa la función",
+      language: "javascript",
+      template: "function f() {}",
+      testCases: [{ input: "1", expectedOutput: "2" }],
+      difficulty: "MID",
+    };
+    openaiCreateMock.mockResolvedValueOnce({
+      choices: [{ message: { content: JSON.stringify({ exercises: [codeExercise] }) } }],
+    });
+    vi.mocked(prisma.exercise.create).mockResolvedValue({
+      id: "ex1",
+      lessonId: "l1",
+      type: "CODE",
+      question: codeExercise.question,
+      options: "{}",
+      correctAnswer: "",
+      order: 0,
+      createdAt: new Date(),
+    } as never);
+    const res = await POST(
+      new Request("https://x.com", { method: "POST", body: JSON.stringify({}) }),
+      { params: Promise.resolve({ lessonId: "l1" }) }
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data)).toBe(true);
+    expect(data.length).toBe(1);
+    expect(prisma.exercise.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: "CODE",
+          difficulty: "MID",
+        }),
+      })
+    );
+  });
+
+  it("usa count y allowedTypes por defecto cuando el body no es JSON válido", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      title: "Lección",
+      content: "Contenido",
+    } as never);
+    const res = await POST(
+      new Request("https://x.com", { method: "POST", body: "not json", headers: { "Content-Type": "application/json" } }),
+      { params: Promise.resolve({ lessonId: "l1" }) }
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data)).toBe(true);
+  });
+
+  it("devuelve 502 cuando la IA devuelve ejercicio CODE con language no permitido", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      title: "Lección",
+      content: "Contenido",
+    } as never);
+    openaiCreateMock.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              exercises: [
+                {
+                  type: "CODE",
+                  question: "Q",
+                  language: "ruby",
+                  template: "def f\nend",
+                  testCases: [{ input: "1", expectedOutput: "2" }],
+                },
+              ],
+            }),
+          },
+        },
+      ],
+    });
+    const res = await POST(
+      new Request("https://x.com", { method: "POST", body: JSON.stringify({ types: ["CODE"] }) }),
+      { params: Promise.resolve({ lessonId: "l1" }) }
+    );
+    expect(res.status).toBe(502);
+    const data = await res.json();
+    expect(data.error).toMatch(/válidos|tipos/);
+  });
+
+  it("devuelve 502 cuando TRUE_FALSE tiene correctAnswer no boolean", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      title: "Lección",
+      content: "Contenido",
+    } as never);
+    openaiCreateMock.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              exercises: [{ type: "TRUE_FALSE", question: "¿Verdadero?", correctAnswer: 1 }],
+            }),
+          },
+        },
+      ],
+    });
+    const res = await POST(
+      new Request("https://x.com", { method: "POST", body: JSON.stringify({ types: ["TRUE_FALSE"] }) }),
+      { params: Promise.resolve({ lessonId: "l1" }) }
+    );
+    expect(res.status).toBe(502);
+    const data = await res.json();
+    expect(data.error).toMatch(/válidos|tipos/);
+  });
+
+  it("devuelve 502 cuando MULTIPLE_CHOICE tiene menos de 2 options", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      title: "Lección",
+      content: "Contenido",
+    } as never);
+    openaiCreateMock.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              exercises: [{ type: "MULTIPLE_CHOICE", question: "Q", options: ["A"], correctAnswer: 0 }],
+            }),
+          },
+        },
+      ],
+    });
+    const res = await POST(
+      new Request("https://x.com", { method: "POST", body: JSON.stringify({ types: ["MULTIPLE_CHOICE"] }) }),
+      { params: Promise.resolve({ lessonId: "l1" }) }
+    );
+    expect(res.status).toBe(502);
+    const data = await res.json();
+    expect(data.error).toMatch(/válidos|tipos/);
+  });
 });

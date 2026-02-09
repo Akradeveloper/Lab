@@ -148,12 +148,18 @@ describe("app-config", () => {
       expect(result).toBe("gpt-4o");
     });
 
-    it("devuelve número para clave numérica", async () => {
+    it("devuelve número para clave numérica (numKeys)", async () => {
       vi.mocked(prisma.appConfig.findUnique).mockResolvedValue({
         value: "42",
       } as never);
       const result = await getConfigValue("min_lessons_testimonial");
       expect(result).toBe(42);
+    });
+
+    it("devuelve fallback numérico cuando la clave numérica no existe en BD", async () => {
+      vi.mocked(prisma.appConfig.findUnique).mockResolvedValue(null);
+      const result = await getConfigValue("rate_limit_window_minutes");
+      expect(result).toBe(15);
     });
 
     it("devuelve cadena vacía para clave no existente en FALLBACK_MAP", async () => {

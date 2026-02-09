@@ -1,3 +1,4 @@
+import path from "path";
 import { describe, it, expect, vi, afterEach } from "vitest";
 
 const existsSyncMock = vi.fn();
@@ -31,6 +32,15 @@ describe("db-path", () => {
       expect(result).toBe("/abs/path/db.sqlite");
     });
 
+    it("devuelve path.resolve cuando la ruta es relativa (no absoluta)", async () => {
+      vi.stubEnv("DATABASE_URL", "file:relative/path.db");
+      vi.resetModules();
+      const { getDbFilePath } = await import("@/lib/db-path");
+      const result = getDbFilePath();
+      expect(path.isAbsolute(result)).toBe(true);
+      expect(result).toBe(path.resolve(process.cwd(), "relative/path.db"));
+    });
+
     it("lanza si DATABASE_URL no empieza por file:", async () => {
       vi.stubEnv("DATABASE_URL", "mysql://localhost/db");
       vi.resetModules();
@@ -38,6 +48,13 @@ describe("db-path", () => {
       expect(() => getDbFilePath()).toThrow(
         "backup/restore por archivo solo está disponible con SQLite"
       );
+    });
+
+    it("lanza si DATABASE_URL es file: sin path (regex no captura)", async () => {
+      vi.stubEnv("DATABASE_URL", "file:");
+      vi.resetModules();
+      const { getDbFilePath } = await import("@/lib/db-path");
+      expect(() => getDbFilePath()).toThrow("DATABASE_URL debe ser una URL file:");
     });
   });
 

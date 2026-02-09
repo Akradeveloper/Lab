@@ -61,4 +61,39 @@ describe("GET /api/admin/db/backup", () => {
     const text = await res.text();
     expect(text).toContain("modules");
   });
+
+  it("devuelve 500 cuando ocurre error en el backup", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(isMySQL).mockReturnValue(false);
+    vi.mocked(getDbFilePathOrThrow).mockImplementation(() => {
+      throw new Error("No existe el archivo");
+    });
+    const res = await GET();
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toBeDefined();
+  });
+
+  it("devuelve 500 cuando readFileSync lanza (catch L42)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(isMySQL).mockReturnValue(false);
+    vi.mocked(getDbFilePathOrThrow).mockReturnValue("/tmp/db.db");
+    vi.mocked(fs.readFileSync).mockImplementation(() => {
+      throw new Error("EACCES");
+    });
+    const res = await GET();
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toBe("EACCES");
+  });
+
+  it("devuelve 500 cuando exportBackupToJson lanza (MySQL)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(isMySQL).mockReturnValue(true);
+    vi.mocked(exportBackupToJson).mockRejectedValue(new Error("DB connection lost"));
+    const res = await GET();
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toBe("DB connection lost");
+  });
 });
