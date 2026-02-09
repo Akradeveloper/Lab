@@ -6,7 +6,7 @@ El proyecto usa un archivo `.env` en la raíz. Puedes copiar `.env.example` como
 
 | Variable | Descripción |
 |----------|-------------|
-| `DATABASE_URL` | URL de la base de datos. Para SQLite local: `file:./prisma/dev.db`. |
+| `DATABASE_URL` | URL de la base de datos. El proyecto usa **MySQL**; formato típico: `mysql://usuario:contraseña@host:3306/nombre_bd`. Opcionalmente se pueden usar las variables `DB_HOST`, `DB_NAME`, `DB_PASSWORD`, `DB_PORT`, `DB_USER` para construir la URL (ver `src/lib/database-url.ts`). |
 | `NEXTAUTH_SECRET` | Secreto para firmar los JWT de NextAuth. Debe ser un valor seguro y distinto en producción. |
 | `NEXTAUTH_URL` | URL base de la aplicación (ej. `http://localhost:3000`). Debe coincidir con la URL donde corre la app. |
 

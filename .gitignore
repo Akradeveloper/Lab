@@ -27,7 +27,7 @@ backups/
 # entregas de proyectos (archivos subidos por alumnos)
 uploads/
 
-# databases (SQLite)
+# databases (archivos .db locales, p. ej. SQLite)
 *.db
 prisma/dev.db
 prisma/test.db

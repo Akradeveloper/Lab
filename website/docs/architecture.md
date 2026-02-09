@@ -4,7 +4,7 @@
 
 - **Next.js 16** (App Router) con TypeScript
 - **Tailwind CSS** para estilos
-- **Prisma 7** como ORM con **SQLite** (adaptador better-sqlite3)
+- **Prisma 7** como ORM con **MySQL** (driver/adaptador según configuración)
 - **NextAuth** con proveedor Credentials y estrategia JWT (sin adapter de BD de NextAuth)
 
 ## Roles
@@ -75,7 +75,7 @@
 - **Ejercicios**: `GET/POST /api/admin/lessons/[lessonId]/exercises`, `PUT/DELETE /api/admin/exercises/[id]`; `GET suggest-exercises`, `POST generate-exercises`.
 - **Configuración**: `GET /api/admin/config`, `PATCH /api/admin/config` (body `updates` con claves como `project_submission_cooldown_hours`, etc.).
 - **Entregas de proyectos**: `POST /api/admin/project-submissions/[submissionId]/approve`, `POST /api/admin/project-submissions/[submissionId]/reject`; `GET /api/admin/project-submissions/[submissionId]/download` (descarga de archivo si el tipo es FILE).
-- **Base de datos**: `GET /api/admin/db/backup` (descarga .db), `POST /api/admin/db/restore` (sube .db).
+- **Base de datos**: `GET /api/admin/db/backup` (descarga .json con MySQL), `POST /api/admin/db/restore` (sube .json).
 
 ## Modelo de datos (Prisma)
 
@@ -92,7 +92,7 @@
 
 Enums: **Role** (ALUMNO, ADMIN), **ExerciseType** (MULTIPLE_CHOICE, TRUE_FALSE, CODE), **DifficultyLevel** (APRENDIZ, JUNIOR, MID, SENIOR, ESPECIALISTA), **ProjectSubmissionStatus** (PENDING, REJECTED, APPROVED), **ProjectSubmissionType** (URL, FILE).
 
-La base de datos SQLite se encuentra en `prisma/dev.db` (ruta configurada por `DATABASE_URL`).
+La base de datos es **MySQL**. La conexión se configura con `DATABASE_URL` (formato `mysql://usuario:contraseña@host:3306/nombre_bd`) o con las variables `DB_HOST`, `DB_NAME`, `DB_PASSWORD`, `DB_PORT`, `DB_USER`.
 
 ## Autenticación
 

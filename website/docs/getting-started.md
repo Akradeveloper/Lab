@@ -18,12 +18,12 @@ npm install
 3. Crea el archivo de entorno `.env` en la raíz (puedes copiar de `.env.example` si existe). Variables necesarias:
 
 ```env
-DATABASE_URL="file:./prisma/dev.db"
+DATABASE_URL="mysql://usuario:contraseña@host:3306/nombre_bd"
 NEXTAUTH_SECRET="cambiar-en-produccion"
 NEXTAUTH_URL="http://localhost:3000"
 ```
 
-(Ajusta `NEXTAUTH_URL` al puerto que uses, por ejemplo `http://localhost:3001` si el 3000 está ocupado.)
+Necesitas un servidor MySQL en marcha. Crea la base de datos si no existe (por ejemplo `CREATE DATABASE qalab;`). Ajusta `NEXTAUTH_URL` al puerto que uses (por ejemplo `http://localhost:3001` si el 3000 está ocupado).
 
 Opcional, para funcionalidades con IA (Nueva lección con IA, Generar ejercicios con IA, Ordenar con IA):
 
@@ -59,8 +59,7 @@ Abre en el navegador la URL que indique Next.js (por ejemplo `http://localhost:3
 
 ## Backup y restauración de la base de datos
 
-- **Desde el panel admin**: en Admin → Base de datos puedes descargar un backup (archivo .db) y subir un archivo .db para restaurar.
-- **Desde terminal**: `npm run db:backup` crea un archivo en `backups/`. Para restaurar: `npm run db:restore -- backups/backup-YYYY-MM-DDTHH-mm-ss.db` (o sin argumento para usar el más reciente). Ver README en la raíz del proyecto.
+Con **MySQL**, desde el panel admin (Admin → Base de datos) puedes descargar un backup (archivo .json) y restaurar subiendo un .json. Desde terminal, `npm run db:backup` y `npm run db:restore` también soportan MySQL (generan y restauran archivos .json). Ver README en la raíz del proyecto para más detalle.
 
 ## Primer administrador
 

@@ -15,8 +15,8 @@
 - **Admin – currículo**: en cada módulo hay pestañas **Submódulos** y **Lecciones** para elegir qué gestionar; se pueden crear el primer submódulo o lecciones directas del módulo. Crear/editar módulos, submódulos y lecciones (título, contenido, orden, dificultad). “Nueva lección con IA” y “Generar ejercicios con IA” (OpenAI). “Ordenar con IA” para que la IA sugiera un orden de lecciones (de básico a complejo) y aplicar ese orden.
 - **Admin – Configuración**: en el panel hay un enlace a Configuración con pestañas (IA, Testimonios, Límites, Rate limit, Entregas de proyectos, Logros). Desde ahí se configura, entre otras cosas, el tiempo de espera para reenviar un proyecto tras rechazo.
 - **Admin – alumnos**: listado de alumnos y detalle por alumno (progreso, intentos en lecciones y ejercicios, entregas de proyectos con estado pendiente/rechazado/aprobado). El admin puede aprobar o rechazar cada entrega de proyecto.
-- **Admin – base de datos**: backup (descargar archivo .db) y restauración (subir .db) desde la interfaz.
-- **Base de datos**: SQLite con Prisma (Module, Submodule, Lesson, Exercise, Progress, etc.). Scripts `npm run db:backup` y `npm run db:restore` desde terminal.
+- **Admin – base de datos**: backup (descargar .json) y restauración (subir .json) desde la interfaz.
+- **Base de datos**: MySQL con Prisma (Module, Submodule, Lesson, Exercise, Progress, etc.). Scripts `npm run db:backup` y `npm run db:restore` (con MySQL usan archivos .json; ver README).
 
 ## Enlaces
 

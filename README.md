@@ -37,9 +37,7 @@ Los nuevos registros son **alumnos**. Solo el admin puede entrar en `/admin` y v
 
 ## Backup de la base de datos
 
-El proyecto usa **MySQL**. El backup/restore por archivo (.db) desde el panel admin (**Admin → Base de datos**) y los scripts `npm run db:backup` / `npm run db:restore` están pensados para **SQLite** y no están disponibles con MySQL.
-
-Con **MySQL**, haz backup y restauración con las herramientas del servidor, por ejemplo:
+Con **MySQL**, el panel **Admin → Base de datos** permite descargar un backup (archivo .json) y restaurar subiendo un .json. Los scripts `npm run db:backup` y `npm run db:restore` también soportan MySQL (generan y restauran archivos .json). Para backups externos o producción puedes usar las herramientas del servidor, por ejemplo:
 
 - **Backup:** `mysqldump -u usuario -p nombre_bd > backup.sql`
 - **Restaurar:** `mysql -u usuario -p nombre_bd < backup.sql`

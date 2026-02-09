@@ -30,6 +30,7 @@ function validateEnv(): {
       return {
         NEXTAUTH_SECRET: "build",
         NEXTAUTH_URL: "http://localhost:3000",
+        // En producción o con MySQL debe definirse DATABASE_URL en .env
         DATABASE_URL: "file:./prisma/dev.db",
       };
     }

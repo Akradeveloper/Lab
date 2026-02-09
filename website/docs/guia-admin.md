@@ -61,7 +61,7 @@ En **Entregas de proyectos** aparece una tabla con las entregas del alumno (mód
 
 En **Admin → Base de datos** puedes:
 
-- **Descargar un backup** de la base de datos (archivo .db) para guardarlo en un lugar seguro.
-- **Restaurar** subiendo un archivo .db (por ejemplo un backup anterior). La restauración reemplaza la BD actual; úsala con cuidado.
+- **Descargar un backup** de la base de datos (archivo .json con MySQL) para guardarlo en un lugar seguro.
+- **Restaurar** subiendo un archivo .json (por ejemplo un backup anterior). La restauración reemplaza la BD actual; úsala con cuidado.
 
-Además, desde la terminal del proyecto puedes usar `npm run db:backup` y `npm run db:restore` (ver README en la raíz).
+Además, desde la terminal del proyecto puedes usar `npm run db:backup` y `npm run db:restore` (con MySQL usan archivos .json; ver README en la raíz).
