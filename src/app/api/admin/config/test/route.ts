@@ -1,13 +1,8 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { unauthorized } from "@/lib/api-responses";
 import { getOpenAIModel } from "@/lib/app-config";
-
-function isAdmin(session: unknown): boolean {
-  const user = (session as { user?: { role?: string } })?.user;
-  return user?.role === "ADMIN";
-}
 
 /**
  * POST /api/admin/config/test
@@ -16,10 +11,8 @@ function isAdmin(session: unknown): boolean {
  * No persiste nada. Solo ADMIN.
  */
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id || !isAdmin(session)) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {

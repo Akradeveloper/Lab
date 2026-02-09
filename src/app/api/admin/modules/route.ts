@@ -1,17 +1,16 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { badRequest, serverError, unauthorized } from "@/lib/api-responses";
+import { handlePrismaError } from "@/lib/prisma-error";
 import { prisma } from "@/lib/prisma";
 import { getOpenAIModel } from "@/lib/app-config";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   const modules = await prisma.module.findMany({
     orderBy: { order: "asc" },
@@ -38,20 +37,15 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   try {
     const body = await request.json();
     const { title, description, order } = body;
 
     if (!title || typeof title !== "string" || !title.trim()) {
-      return NextResponse.json(
-        { error: "El título es obligatorio" },
-        { status: 400 }
-      );
+      return badRequest("El título es obligatorio");
     }
 
     const userDescription =
@@ -102,9 +96,6 @@ export async function POST(request: Request) {
     if (process.env.NODE_ENV !== "production") {
       console.error("Error al crear módulo:", e);
     }
-    return NextResponse.json(
-      { error: "Error al crear el módulo" },
-      { status: 500 }
-    );
+    return serverError("Error al crear el módulo");
   }
 }

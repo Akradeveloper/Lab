@@ -1,17 +1,15 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import fs from "fs";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { serverError, unauthorized } from "@/lib/api-responses";
 import { exportBackupToJson } from "@/lib/db-backup-restore";
 import { getDbFilePathOrThrow } from "@/lib/db-path";
 import { isMySQL } from "@/lib/database-url";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   const now = new Date();
   const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -42,6 +40,6 @@ export async function GET() {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Error al leer la BD";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError(message);
   }
 }

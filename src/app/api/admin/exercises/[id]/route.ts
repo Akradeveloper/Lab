@@ -1,23 +1,17 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { badRequest, unauthorized } from "@/lib/api-responses";
+import { handlePrismaError } from "@/lib/prisma-error";
 import { prisma } from "@/lib/prisma";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function PUT(request: Request, { params }: Params) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   const { id } = await params;
-  if (!id) {
-    return NextResponse.json(
-      { error: "ID de ejercicio requerido" },
-      { status: 400 }
-    );
-  }
+  if (!id) return badRequest("ID de ejercicio requerido");
 
   try {
     const body = await request.json();
@@ -32,21 +26,11 @@ export async function PUT(request: Request, { params }: Params) {
     } = {};
 
     if (type !== undefined) {
-      if (!["MULTIPLE_CHOICE", "TRUE_FALSE", "CODE", "DESARROLLO"].includes(type)) {
-        return NextResponse.json(
-          { error: "Tipo de ejercicio inválido" },
-          { status: 400 }
-        );
-      }
+      if (!["MULTIPLE_CHOICE", "TRUE_FALSE", "CODE", "DESARROLLO"].includes(type)) return badRequest("Tipo de ejercicio inválido");
       data.type = type;
     }
     if (question !== undefined) {
-      if (typeof question !== "string" || !question.trim()) {
-        return NextResponse.json(
-          { error: "El enunciado no puede estar vacío" },
-          { status: 400 }
-        );
-      }
+      if (typeof question !== "string" || !question.trim()) return badRequest("El enunciado no puede estar vacío");
       data.question = question.trim();
     }
     if (options !== undefined) {
@@ -80,12 +64,7 @@ export async function PUT(request: Request, { params }: Params) {
       }
     }
     if (order !== undefined) {
-      if (typeof order !== "number" || !Number.isInteger(order)) {
-        return NextResponse.json(
-          { error: "El orden debe ser un número entero" },
-          { status: 400 }
-        );
-      }
+      if (typeof order !== "number" || !Number.isInteger(order)) return badRequest("El orden debe ser un número entero");
       data.order = order;
     }
 
@@ -96,35 +75,16 @@ export async function PUT(request: Request, { params }: Params) {
 
     return NextResponse.json(exercise);
   } catch (e) {
-    if ((e as { code?: string })?.code === "P2025") {
-      return NextResponse.json(
-        { error: "Ejercicio no encontrado" },
-        { status: 404 }
-      );
-    }
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Error al actualizar ejercicio:", e);
-    }
-    return NextResponse.json(
-      { error: "Error al actualizar el ejercicio" },
-      { status: 500 }
-    );
+    return handlePrismaError(e, { notFoundMessage: "Ejercicio no encontrado", context: "Error al actualizar ejercicio:" });
   }
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   const { id } = await params;
-  if (!id) {
-    return NextResponse.json(
-      { error: "ID de ejercicio requerido" },
-      { status: 400 }
-    );
-  }
+  if (!id) return badRequest("ID de ejercicio requerido");
 
   try {
     await prisma.exercise.delete({
@@ -132,18 +92,6 @@ export async function DELETE(_request: Request, { params }: Params) {
     });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    if ((e as { code?: string })?.code === "P2025") {
-      return NextResponse.json(
-        { error: "Ejercicio no encontrado" },
-        { status: 404 }
-      );
-    }
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Error al eliminar ejercicio:", e);
-    }
-    return NextResponse.json(
-      { error: "Error al eliminar el ejercicio" },
-      { status: 500 }
-    );
+    return handlePrismaError(e, { notFoundMessage: "Ejercicio no encontrado", context: "Error al eliminar ejercicio:" });
   }
 }

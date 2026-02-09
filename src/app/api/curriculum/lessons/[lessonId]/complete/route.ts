@@ -1,23 +1,17 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import { badRequest, notFound, serverError, unauthorized } from "@/lib/api-responses";
 import { prisma } from "@/lib/prisma";
 
 type Params = { params: Promise<{ lessonId: string }> };
 
 export async function POST(_request: Request, { params }: Params) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  if (!session?.user?.id) return unauthorized();
 
   const { lessonId } = await params;
-  if (!lessonId) {
-    return NextResponse.json(
-      { error: "ID de lección requerido" },
-      { status: 400 }
-    );
-  }
+  if (!lessonId) return badRequest("ID de lección requerido");
 
   const userId = session.user.id;
 
@@ -32,12 +26,7 @@ export async function POST(_request: Request, { params }: Params) {
       },
     });
 
-    if (!lesson) {
-      return NextResponse.json(
-        { error: "Lección no encontrada" },
-        { status: 404 }
-      );
-    }
+    if (!lesson) return notFound("Lección no encontrada");
 
     if ((lesson.lessonType ?? "standard") === "project" && session.user.role !== "ADMIN") {
       return NextResponse.json(
@@ -121,9 +110,6 @@ export async function POST(_request: Request, { params }: Params) {
     if (process.env.NODE_ENV !== "production") {
       console.error("Error al marcar lección completada:", e);
     }
-    return NextResponse.json(
-      { error: "Error al guardar el progreso" },
-      { status: 500 }
-    );
+    return serverError("Error al guardar el progreso");
   }
 }

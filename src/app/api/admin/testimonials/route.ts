@@ -1,6 +1,6 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { serverError, unauthorized } from "@/lib/api-responses";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -8,10 +8,8 @@ import { prisma } from "@/lib/prisma";
  * Lista todos los testimonios (solo ADMIN).
  */
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id || (session.user as { role?: string }).role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   try {
     const testimonials = await prisma.testimonial.findMany({
@@ -35,9 +33,6 @@ export async function GET() {
     if (process.env.NODE_ENV !== "production") {
       console.error("Error listando testimonios admin:", e);
     }
-    return NextResponse.json(
-      { error: "Error al cargar testimonios" },
-      { status: 500 },
-    );
+    return serverError("Error al cargar testimonios");
   }
 }

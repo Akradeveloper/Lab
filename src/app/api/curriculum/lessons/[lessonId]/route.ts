@@ -1,23 +1,17 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import { badRequest, notFound, unauthorized } from "@/lib/api-responses";
 import { prisma } from "@/lib/prisma";
 
 type Params = { params: Promise<{ lessonId: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  if (!session?.user?.id) return unauthorized();
 
   const { lessonId } = await params;
-  if (!lessonId) {
-    return NextResponse.json(
-      { error: "ID de lección requerido" },
-      { status: 400 }
-    );
-  }
+  if (!lessonId) return badRequest("ID de lección requerido");
 
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
@@ -44,10 +38,7 @@ export async function GET(_request: Request, { params }: Params) {
   });
 
   if (!lesson) {
-    return NextResponse.json(
-      { error: "Lección no encontrada" },
-      { status: 404 }
-    );
+    return notFound("Lección no encontrada");
   }
 
   const exercises = lesson.exercises

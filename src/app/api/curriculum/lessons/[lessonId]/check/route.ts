@@ -1,33 +1,24 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import { badRequest, serverError, unauthorized } from "@/lib/api-responses";
 import { prisma } from "@/lib/prisma";
 
 type Params = { params: Promise<{ lessonId: string }> };
 
 export async function POST(request: Request, { params }: Params) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  if (!session?.user?.id) return unauthorized();
 
   const { lessonId } = await params;
-  if (!lessonId) {
-    return NextResponse.json(
-      { error: "ID de lección requerido" },
-      { status: 400 }
-    );
-  }
+  if (!lessonId) return badRequest("ID de lección requerido");
 
   try {
     const body = await request.json();
     const answers = body.answers as Record<string, unknown>;
 
     if (!answers || typeof answers !== "object") {
-      return NextResponse.json(
-        { error: "Se espera un objeto answers con las respuestas por ejercicio" },
-        { status: 400 }
-      );
+      return badRequest("Se espera un objeto answers con las respuestas por ejercicio");
     }
 
     const exercises = await prisma.exercise.findMany({
@@ -90,10 +81,7 @@ export async function POST(request: Request, { params }: Params) {
     if (process.env.NODE_ENV !== "production") {
       console.error("Error al comprobar respuestas:", e);
     }
-    return NextResponse.json(
-      { error: "Error al comprobar las respuestas" },
-      { status: 500 }
-    );
+    return serverError("Error al comprobar las respuestas");
   }
 }
 

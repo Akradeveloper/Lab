@@ -1,6 +1,6 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { serverError, unauthorized } from "@/lib/api-responses";
 import { prisma } from "@/lib/prisma";
 import {
   CONFIG_KEYS,
@@ -118,20 +118,13 @@ const NUMERIC_RANGES: Record<
   },
 };
 
-function isAdmin(session: unknown): boolean {
-  const user = (session as { user?: { role?: string } })?.user;
-  return user?.role === "ADMIN";
-}
-
 /**
  * GET /api/admin/config
  * Devuelve todas las claves conocidas con su valor actual (BD o fallback). Solo ADMIN.
  */
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id || !isAdmin(session)) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   try {
     const result: Record<string, string | number | number[]> = {};
@@ -143,10 +136,7 @@ export async function GET() {
     if (process.env.NODE_ENV !== "production") {
       console.error("Error leyendo config:", e);
     }
-    return NextResponse.json(
-      { error: "Error al leer la configuración" },
-      { status: 500 }
-    );
+    return serverError("Error al leer la configuración");
   }
 }
 
@@ -157,10 +147,8 @@ export async function GET() {
  * Solo ADMIN.
  */
 export async function PATCH(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id || !isAdmin(session)) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   try {
     const body = await request.json();

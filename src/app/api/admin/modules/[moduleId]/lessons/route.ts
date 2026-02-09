@@ -1,40 +1,25 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import type { DifficultyLevel } from "@prisma/client";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { badRequest, notFound, serverError, unauthorized } from "@/lib/api-responses";
 import { prisma } from "@/lib/prisma";
 
 type Params = { params: Promise<{ moduleId: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   const { moduleId } = await params;
-  if (!moduleId) {
-    return NextResponse.json(
-      { error: "ID de módulo requerido" },
-      { status: 400 }
-    );
-  }
+  if (!moduleId) return badRequest("ID de módulo requerido");
 
   const module_ = await prisma.module.findUnique({
     where: { id: moduleId },
     include: { _count: { select: { submodules: true } } },
   });
-  if (!module_) {
-    return NextResponse.json(
-      { error: "Módulo no encontrado" },
-      { status: 404 }
-    );
-  }
+  if (!module_) return notFound("Módulo no encontrado");
   if (module_._count.submodules > 0) {
-    return NextResponse.json(
-      { error: "Este módulo tiene submódulos; las lecciones se gestionan por submódulo." },
-      { status: 400 }
-    );
+    return badRequest("Este módulo tiene submódulos; las lecciones se gestionan por submódulo.");
   }
 
   const lessons = await prisma.lesson.findMany({
@@ -61,34 +46,19 @@ export async function GET(_request: Request, { params }: Params) {
 }
 
 export async function POST(request: Request, { params }: Params) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   const { moduleId } = await params;
-  if (!moduleId) {
-    return NextResponse.json(
-      { error: "ID de módulo requerido" },
-      { status: 400 }
-    );
-  }
+  if (!moduleId) return badRequest("ID de módulo requerido");
 
   const module_ = await prisma.module.findUnique({
     where: { id: moduleId },
     include: { _count: { select: { submodules: true } } },
   });
-  if (!module_) {
-    return NextResponse.json(
-      { error: "Módulo no encontrado" },
-      { status: 404 }
-    );
-  }
+  if (!module_) return notFound("Módulo no encontrado");
   if (module_._count.submodules > 0) {
-    return NextResponse.json(
-      { error: "Este módulo tiene submódulos; añade lecciones desde el submódulo." },
-      { status: 400 }
-    );
+    return badRequest("Este módulo tiene submódulos; añade lecciones desde el submódulo.");
   }
 
   const VALID_DIFFICULTY = ["APRENDIZ", "JUNIOR", "MID", "SENIOR", "ESPECIALISTA"] as const;
@@ -98,12 +68,7 @@ export async function POST(request: Request, { params }: Params) {
     const body = await request.json();
     const { title, content, order, difficulty, lessonType } = body;
 
-    if (!title || typeof title !== "string" || !title.trim()) {
-      return NextResponse.json(
-        { error: "El título es obligatorio" },
-        { status: 400 }
-      );
-    }
+    if (!title || typeof title !== "string" || !title.trim()) return badRequest("El título es obligatorio");
 
     const difficultyValue =
       difficulty != null && typeof difficulty === "string" && VALID_DIFFICULTY.includes(difficulty as typeof VALID_DIFFICULTY[number])
@@ -130,18 +95,8 @@ export async function POST(request: Request, { params }: Params) {
 
     return NextResponse.json(lesson);
   } catch (e) {
-    if ((e as { code?: string })?.code === "P2003") {
-      return NextResponse.json(
-        { error: "Módulo no encontrado" },
-        { status: 404 }
-      );
-    }
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Error al crear lección:", e);
-    }
-    return NextResponse.json(
-      { error: "Error al crear la lección" },
-      { status: 500 }
-    );
+    if ((e as { code?: string })?.code === "P2003") return notFound("Módulo no encontrado");
+    if (process.env.NODE_ENV !== "production") console.error("Error al crear lección:", e);
+    return serverError("Error al crear la lección");
   }
 }

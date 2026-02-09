@@ -1,7 +1,7 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { unauthorized } from "@/lib/api-responses";
 import { prisma } from "@/lib/prisma";
 import {
   buildDescriptionSystemPrompt,
@@ -14,10 +14,8 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 type Params = { params: Promise<{ moduleId: string }> };
 
 export async function POST(request: Request, { params }: Params) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   if (!OPENAI_API_KEY?.trim()) {
     return NextResponse.json(

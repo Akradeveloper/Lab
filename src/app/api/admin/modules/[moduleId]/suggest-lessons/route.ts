@@ -1,7 +1,7 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { unauthorized } from "@/lib/api-responses";
 import { prisma } from "@/lib/prisma";
 import { buildSuggestLessonsPrompt } from "@/lib/ai-prompts";
 import { getOpenAIModel } from "@/lib/app-config";
@@ -11,10 +11,8 @@ type Params = { params: Promise<{ moduleId: string }> };
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 export async function GET(_request: Request, { params }: Params) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   if (!OPENAI_API_KEY?.trim()) {
     return NextResponse.json(
@@ -28,31 +26,17 @@ export async function GET(_request: Request, { params }: Params) {
   }
 
   const { moduleId } = await params;
-  if (!moduleId) {
-    return NextResponse.json(
-      { error: "ID de módulo requerido", suggestions: [] },
-      { status: 400 },
-    );
-  }
+  if (!moduleId) return NextResponse.json({ error: "ID de módulo requerido", suggestions: [] }, { status: 400 });
 
   try {
     const module_ = await prisma.module.findUnique({
       where: { id: moduleId },
       include: { _count: { select: { submodules: true } } },
     });
-    if (!module_) {
-      return NextResponse.json(
-        { error: "Módulo no encontrado", suggestions: [] },
-        { status: 404 },
-      );
-    }
+    if (!module_) return NextResponse.json({ error: "Módulo no encontrado", suggestions: [] }, { status: 404 });
     if (module_._count.submodules > 0) {
       return NextResponse.json(
-        {
-          error:
-            "Este módulo tiene submódulos; usa las sugerencias desde un submódulo.",
-          suggestions: [],
-        },
+        { error: "Este módulo tiene submódulos; usa las sugerencias desde un submódulo.", suggestions: [] },
         { status: 400 },
       );
     }

@@ -1,23 +1,16 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { badRequest, notFound, serverError, unauthorized } from "@/lib/api-responses";
 import { prisma } from "@/lib/prisma";
 
 type Params = { params: Promise<{ lessonId: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   const { lessonId } = await params;
-  if (!lessonId) {
-    return NextResponse.json(
-      { error: "ID de lección requerido" },
-      { status: 400 }
-    );
-  }
+  if (!lessonId) return badRequest("ID de lección requerido");
 
   const exercises = await prisma.exercise.findMany({
     where: { lessonId },
@@ -39,34 +32,21 @@ export async function GET(_request: Request, { params }: Params) {
 }
 
 export async function POST(request: Request, { params }: Params) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   const { lessonId } = await params;
-  if (!lessonId) {
-    return NextResponse.json(
-      { error: "ID de lección requerido" },
-      { status: 400 }
-    );
-  }
+  if (!lessonId) return badRequest("ID de lección requerido");
 
   try {
     const body = await request.json();
     const { type, question, options, correctAnswer, order } = body;
 
     if (!type || !["MULTIPLE_CHOICE", "TRUE_FALSE", "CODE", "DESARROLLO"].includes(type)) {
-      return NextResponse.json(
-        { error: "Tipo de ejercicio inválido (MULTIPLE_CHOICE, TRUE_FALSE, CODE o DESARROLLO)" },
-        { status: 400 }
-      );
+      return badRequest("Tipo de ejercicio inválido (MULTIPLE_CHOICE, TRUE_FALSE, CODE o DESARROLLO)");
     }
     if (!question || typeof question !== "string" || !question.trim()) {
-      return NextResponse.json(
-        { error: "El enunciado es obligatorio" },
-        { status: 400 }
-      );
+      return badRequest("El enunciado es obligatorio");
     }
 
     let optionsStr: string;
@@ -118,18 +98,8 @@ export async function POST(request: Request, { params }: Params) {
 
     return NextResponse.json(exercise);
   } catch (e) {
-    if ((e as { code?: string })?.code === "P2003") {
-      return NextResponse.json(
-        { error: "Lección no encontrada" },
-        { status: 404 }
-      );
-    }
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Error al crear ejercicio:", e);
-    }
-    return NextResponse.json(
-      { error: "Error al crear el ejercicio" },
-      { status: 500 }
-    );
+    if ((e as { code?: string })?.code === "P2003") return notFound("Lección no encontrada");
+    if (process.env.NODE_ENV !== "production") console.error("Error al crear ejercicio:", e);
+    return serverError("Error al crear el ejercicio");
   }
 }

@@ -1,20 +1,17 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { badRequest, unauthorized } from "@/lib/api-responses";
+import { handlePrismaError } from "@/lib/prisma-error";
 import { prisma } from "@/lib/prisma";
 
 type Params = { params: Promise<{ moduleId: string }> };
 
 export async function PUT(request: Request, { params }: Params) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   const { moduleId } = await params;
-  if (!moduleId) {
-    return NextResponse.json({ error: "ID de módulo requerido" }, { status: 400 });
-  }
+  if (!moduleId) return badRequest("ID de módulo requerido");
 
   try {
     const body = await request.json();
@@ -22,12 +19,7 @@ export async function PUT(request: Request, { params }: Params) {
 
     const data: { title?: string; description?: string | null; order?: number } = {};
     if (title !== undefined) {
-      if (typeof title !== "string" || !title.trim()) {
-        return NextResponse.json(
-          { error: "El título no puede estar vacío" },
-          { status: 400 }
-        );
-      }
+      if (typeof title !== "string" || !title.trim()) return badRequest("El título no puede estar vacío");
       data.title = title.trim();
     }
     if (description !== undefined) {
@@ -37,12 +29,7 @@ export async function PUT(request: Request, { params }: Params) {
           : null;
     }
     if (order !== undefined) {
-      if (typeof order !== "number" || !Number.isInteger(order)) {
-        return NextResponse.json(
-          { error: "El orden debe ser un número entero" },
-          { status: 400 }
-        );
-      }
+      if (typeof order !== "number" || !Number.isInteger(order)) return badRequest("El orden debe ser un número entero");
       data.order = order;
     }
 
@@ -53,29 +40,16 @@ export async function PUT(request: Request, { params }: Params) {
 
     return NextResponse.json(module_);
   } catch (e) {
-    if ((e as { code?: string })?.code === "P2025") {
-      return NextResponse.json({ error: "Módulo no encontrado" }, { status: 404 });
-    }
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Error al actualizar módulo:", e);
-    }
-    return NextResponse.json(
-      { error: "Error al actualizar el módulo" },
-      { status: 500 }
-    );
+    return handlePrismaError(e, { notFoundMessage: "Módulo no encontrado", context: "Error al actualizar módulo:" });
   }
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   const { moduleId } = await params;
-  if (!moduleId) {
-    return NextResponse.json({ error: "ID de módulo requerido" }, { status: 400 });
-  }
+  if (!moduleId) return badRequest("ID de módulo requerido");
 
   try {
     await prisma.module.delete({
@@ -83,15 +57,6 @@ export async function DELETE(_request: Request, { params }: Params) {
     });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    if ((e as { code?: string })?.code === "P2025") {
-      return NextResponse.json({ error: "Módulo no encontrado" }, { status: 404 });
-    }
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Error al eliminar módulo:", e);
-    }
-    return NextResponse.json(
-      { error: "Error al eliminar el módulo" },
-      { status: 500 }
-    );
+    return handlePrismaError(e, { notFoundMessage: "Módulo no encontrado", context: "Error al eliminar módulo:" });
   }
 }

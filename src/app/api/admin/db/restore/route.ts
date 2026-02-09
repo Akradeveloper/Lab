@@ -1,7 +1,7 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import fs from "fs";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { badRequest, serverError, unauthorized } from "@/lib/api-responses";
 import { restoreFromJson } from "@/lib/db-backup-restore";
 import { getDbFilePath } from "@/lib/db-path";
 import { isMySQL } from "@/lib/database-url";
@@ -14,27 +14,19 @@ function isSqliteFile(buffer: Buffer): boolean {
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   let formData: FormData;
   try {
     formData = await request.formData();
   } catch {
-    return NextResponse.json(
-      { error: "No se pudo leer el formulario" },
-      { status: 400 }
-    );
+    return badRequest("No se pudo leer el formulario");
   }
 
   const file = formData.get("file");
   if (!file || !(file instanceof File) || file.size === 0) {
-    return NextResponse.json(
-      { error: "Selecciona un archivo válido (.db o .json)" },
-      { status: 400 }
-    );
+    return badRequest("Selecciona un archivo válido (.db o .json)");
   }
 
   const arrayBuffer = await file.arrayBuffer();
@@ -47,20 +39,14 @@ export async function POST(request: Request) {
       const isJson =
         name.endsWith(".json") || (buffer.length > 0 && first === 0x7b);
       if (!isJson) {
-        return NextResponse.json(
-          { error: "Con MySQL solo se pueden restaurar archivos de backup .json generados por esta aplicación." },
-          { status: 400 }
-        );
+        return badRequest("Con MySQL solo se pueden restaurar archivos de backup .json generados por esta aplicación.");
       }
       const text = buffer.toString("utf8");
       let json: unknown;
       try {
         json = JSON.parse(text);
       } catch {
-        return NextResponse.json(
-          { error: "El archivo no es un JSON válido." },
-          { status: 400 }
-        );
+        return badRequest("El archivo no es un JSON válido.");
       }
       await restoreFromJson(prisma, json);
       return NextResponse.json({
@@ -70,10 +56,7 @@ export async function POST(request: Request) {
     }
 
     if (!isSqliteFile(buffer)) {
-      return NextResponse.json(
-        { error: "El archivo no parece una base de datos SQLite válida" },
-        { status: 400 }
-      );
+      return badRequest("El archivo no parece una base de datos SQLite válida");
     }
     const dbPath = getDbFilePath();
     await prisma.$disconnect();
@@ -85,6 +68,6 @@ export async function POST(request: Request) {
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Error al restaurar la BD";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return serverError(message);
   }
 }

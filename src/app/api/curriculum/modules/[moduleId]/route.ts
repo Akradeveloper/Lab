@@ -1,23 +1,17 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import { badRequest, notFound, unauthorized } from "@/lib/api-responses";
 import { prisma } from "@/lib/prisma";
 
 type Params = { params: Promise<{ moduleId: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  if (!session?.user?.id) return unauthorized();
 
   const { moduleId } = await params;
-  if (!moduleId) {
-    return NextResponse.json(
-      { error: "ID de módulo requerido" },
-      { status: 400 }
-    );
-  }
+  if (!moduleId) return badRequest("ID de módulo requerido");
 
   const userId = session.user.id;
 
@@ -41,7 +35,7 @@ export async function GET(_request: Request, { params }: Params) {
   });
 
   if (!module_) {
-    return NextResponse.json({ error: "Módulo no encontrado" }, { status: 404 });
+    return notFound("Módulo no encontrado");
   }
 
   const progress = await prisma.progress.findMany({

@@ -1,24 +1,18 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import type { DifficultyLevel, Prisma } from "@prisma/client";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { badRequest, unauthorized } from "@/lib/api-responses";
+import { handlePrismaError } from "@/lib/prisma-error";
 import { prisma } from "@/lib/prisma";
 
 type Params = { params: Promise<{ lessonId: string }> };
 
 export async function PUT(request: Request, { params }: Params) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   const { lessonId } = await params;
-  if (!lessonId) {
-    return NextResponse.json(
-      { error: "ID de lección requerido" },
-      { status: 400 }
-    );
-  }
+  if (!lessonId) return badRequest("ID de lección requerido");
 
   const VALID_DIFFICULTY = ["APRENDIZ", "JUNIOR", "MID", "SENIOR", "ESPECIALISTA"] as const;
   const VALID_LESSON_TYPE = ["standard", "project"] as const;
@@ -29,24 +23,14 @@ export async function PUT(request: Request, { params }: Params) {
 
     const data: Prisma.LessonUpdateInput = {};
     if (title !== undefined) {
-      if (typeof title !== "string" || !title.trim()) {
-        return NextResponse.json(
-          { error: "El título no puede estar vacío" },
-          { status: 400 }
-        );
-      }
+      if (typeof title !== "string" || !title.trim()) return badRequest("El título no puede estar vacío");
       data.title = title.trim();
     }
     if (content !== undefined) {
       data.content = typeof content === "string" ? content : "";
     }
     if (order !== undefined) {
-      if (typeof order !== "number" || !Number.isInteger(order)) {
-        return NextResponse.json(
-          { error: "El orden debe ser un número entero" },
-          { status: 400 }
-        );
-      }
+      if (typeof order !== "number" || !Number.isInteger(order)) return badRequest("El orden debe ser un número entero");
       data.order = order;
     }
     if (difficulty !== undefined) {
@@ -55,20 +39,14 @@ export async function PUT(request: Request, { params }: Params) {
       } else if (typeof difficulty === "string" && VALID_DIFFICULTY.includes(difficulty as typeof VALID_DIFFICULTY[number])) {
         data.difficulty = difficulty as DifficultyLevel;
       } else {
-        return NextResponse.json(
-          { error: "Dificultad no válida; usa APRENDIZ, JUNIOR, MID, SENIOR o ESPECIALISTA" },
-          { status: 400 }
-        );
+        return badRequest("Dificultad no válida; usa APRENDIZ, JUNIOR, MID, SENIOR o ESPECIALISTA");
       }
     }
     if (lessonType !== undefined) {
       if (typeof lessonType === "string" && VALID_LESSON_TYPE.includes(lessonType as typeof VALID_LESSON_TYPE[number])) {
         data.lessonType = lessonType;
       } else {
-        return NextResponse.json(
-          { error: "Tipo de lección no válido; usa standard o project" },
-          { status: 400 }
-        );
+        return badRequest("Tipo de lección no válido; usa standard o project");
       }
     }
 
@@ -79,35 +57,16 @@ export async function PUT(request: Request, { params }: Params) {
 
     return NextResponse.json(lesson);
   } catch (e) {
-    if ((e as { code?: string })?.code === "P2025") {
-      return NextResponse.json(
-        { error: "Lección no encontrada" },
-        { status: 404 }
-      );
-    }
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Error al actualizar lección:", e);
-    }
-    return NextResponse.json(
-      { error: "Error al actualizar la lección" },
-      { status: 500 }
-    );
+    return handlePrismaError(e, { notFoundMessage: "Lección no encontrada", context: "Error al actualizar lección:" });
   }
 }
 
 export async function DELETE(_request: Request, { params }: Params) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   const { lessonId } = await params;
-  if (!lessonId) {
-    return NextResponse.json(
-      { error: "ID de lección requerido" },
-      { status: 400 }
-    );
-  }
+  if (!lessonId) return badRequest("ID de lección requerido");
 
   try {
     await prisma.lesson.delete({
@@ -115,18 +74,6 @@ export async function DELETE(_request: Request, { params }: Params) {
     });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    if ((e as { code?: string })?.code === "P2025") {
-      return NextResponse.json(
-        { error: "Lección no encontrada" },
-        { status: 404 }
-      );
-    }
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Error al eliminar lección:", e);
-    }
-    return NextResponse.json(
-      { error: "Error al eliminar la lección" },
-      { status: 500 }
-    );
+    return handlePrismaError(e, { notFoundMessage: "Lección no encontrada", context: "Error al eliminar lección:" });
   }
 }

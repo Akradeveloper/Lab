@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { unauthorized } from "@/lib/api-responses";
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
@@ -33,9 +34,7 @@ function getAllowedExtension(name: string): string | null {
 
 export async function POST(request: Request, { params }: Params) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  if (!session?.user?.id) return unauthorized();
   if (session.user.role !== "ALUMNO") {
     return NextResponse.json({ error: "Solo los alumnos pueden entregar proyectos" }, { status: 403 });
   }

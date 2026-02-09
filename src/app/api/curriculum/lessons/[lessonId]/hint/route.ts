@@ -1,4 +1,5 @@
 import { getServerSession } from "next-auth";
+import { unauthorized } from "@/lib/api-responses";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -13,9 +14,7 @@ type Params = { params: Promise<{ lessonId: string }> };
  */
 export async function POST(request: Request, { params }: Params) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  if (!session?.user?.id) return unauthorized();
 
   const { lessonId } = await params;
 

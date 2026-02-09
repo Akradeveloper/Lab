@@ -3,8 +3,11 @@ import {
   getAppConfig,
   getAppConfigNumber,
   getAppConfigJson,
+  getOpenAIModel,
+  getConfigValue,
   CONFIG_KEYS,
   DEFAULT_MIN_LESSONS_TESTIMONIAL,
+  DEFAULT_OPENAI_MODEL,
 } from "@/lib/app-config";
 
 vi.mock("@/lib/prisma", () => ({
@@ -90,6 +93,18 @@ describe("app-config", () => {
       );
       expect(result).toEqual([1, 5, 10, 25]);
     });
+
+    it("devuelve fallback cuando el valor en BD no es JSON válido", async () => {
+      vi.mocked(prisma.appConfig.findUnique).mockResolvedValue({
+        value: "not valid json {{{",
+      } as never);
+      const fallback = [1, 5, 10];
+      const result = await getAppConfigJson(
+        "achievement_milestones",
+        fallback
+      );
+      expect(result).toEqual(fallback);
+    });
   });
 
   describe("CONFIG_KEYS", () => {
@@ -97,6 +112,53 @@ describe("app-config", () => {
       expect(CONFIG_KEYS).toContain("openai_model");
       expect(CONFIG_KEYS).toContain("min_lessons_testimonial");
       expect(CONFIG_KEYS).toContain("achievement_milestones");
+    });
+  });
+
+  describe("getOpenAIModel", () => {
+    it("devuelve modelo de BD cuando existe", async () => {
+      vi.mocked(prisma.appConfig.findUnique).mockResolvedValue({
+        value: "gpt-4o",
+      } as never);
+      const result = await getOpenAIModel();
+      expect(result).toBe("gpt-4o");
+    });
+
+    it("devuelve DEFAULT_OPENAI_MODEL cuando no hay config en BD", async () => {
+      vi.mocked(prisma.appConfig.findUnique).mockResolvedValue(null);
+      const result = await getOpenAIModel();
+      expect(result).toBe(DEFAULT_OPENAI_MODEL);
+    });
+
+    it("devuelve modelo de BD aunque esté con espacios", async () => {
+      vi.mocked(prisma.appConfig.findUnique).mockResolvedValue({
+        value: "  gpt-3.5-turbo  ",
+      } as never);
+      const result = await getOpenAIModel();
+      expect(result).toBe("gpt-3.5-turbo");
+    });
+  });
+
+  describe("getConfigValue", () => {
+    it("devuelve openai_model vía getOpenAIModel", async () => {
+      vi.mocked(prisma.appConfig.findUnique).mockResolvedValue({
+        value: "gpt-4o",
+      } as never);
+      const result = await getConfigValue("openai_model");
+      expect(result).toBe("gpt-4o");
+    });
+
+    it("devuelve número para clave numérica", async () => {
+      vi.mocked(prisma.appConfig.findUnique).mockResolvedValue({
+        value: "42",
+      } as never);
+      const result = await getConfigValue("min_lessons_testimonial");
+      expect(result).toBe(42);
+    });
+
+    it("devuelve cadena vacía para clave no existente en FALLBACK_MAP", async () => {
+      const result = await getConfigValue("clave_inexistente");
+      expect(result).toBe("");
     });
   });
 });

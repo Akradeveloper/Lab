@@ -1,51 +1,33 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { badRequest, notFound, serverError, unauthorized } from "@/lib/api-responses";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   let body: { password?: string };
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json(
-      { error: "Cuerpo de la petición inválido" },
-      { status: 400 }
-    );
+    return badRequest("Cuerpo de la petición inválido");
   }
 
   const password =
     typeof body?.password === "string" ? body.password.trim() : "";
-  if (!password) {
-    return NextResponse.json(
-      { error: "La contraseña es obligatoria" },
-      { status: 400 }
-    );
-  }
+  if (!password) return badRequest("La contraseña es obligatoria");
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { passwordHash: true },
   });
-  if (!user) {
-    return NextResponse.json(
-      { error: "Usuario no encontrado" },
-      { status: 404 }
-    );
-  }
+  if (!user) return notFound("Usuario no encontrado");
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
-    return NextResponse.json(
-      { error: "Contraseña incorrecta" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Contraseña incorrecta" }, { status: 401 });
   }
 
   try {
@@ -68,9 +50,6 @@ export async function POST(request: Request) {
     if (process.env.NODE_ENV !== "production") {
       console.error("Error al vaciar la base de datos:", e);
     }
-    return NextResponse.json(
-      { error: "Error al vaciar la base de datos" },
-      { status: 500 }
-    );
+    return serverError("Error al vaciar la base de datos");
   }
 }

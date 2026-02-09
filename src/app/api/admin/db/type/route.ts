@@ -1,13 +1,11 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { unauthorized } from "@/lib/api-responses";
 import { isMySQL } from "@/lib/database-url";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
   return NextResponse.json({
     database: isMySQL() ? "mysql" as const : "sqlite" as const,
   });

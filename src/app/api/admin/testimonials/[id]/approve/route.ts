@@ -1,6 +1,7 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { getAdminSession } from "@/lib/api-auth";
+import { badRequest, serverError, unauthorized } from "@/lib/api-responses";
+import { handlePrismaError } from "@/lib/prisma-error";
 import { prisma } from "@/lib/prisma";
 
 type Params = { params: Promise<{ id: string }> };
@@ -11,15 +12,11 @@ type Params = { params: Promise<{ id: string }> };
  * Body: { approved: boolean }
  */
 export async function PATCH(request: Request, { params }: Params) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id || (session.user as { role?: string }).role !== "ADMIN") {
-    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-  }
+  const session = await getAdminSession();
+  if (!session) return unauthorized();
 
   const { id } = await params;
-  if (!id) {
-    return NextResponse.json({ error: "ID requerido" }, { status: 400 });
-  }
+  if (!id) return badRequest("ID requerido");
 
   try {
     const body = await request.json();
@@ -32,12 +29,6 @@ export async function PATCH(request: Request, { params }: Params) {
 
     return NextResponse.json({ ok: true, approved });
   } catch (e) {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Error aprobando testimonio:", e);
-    }
-    return NextResponse.json(
-      { error: "Error al actualizar el testimonio" },
-      { status: 500 },
-    );
+    return handlePrismaError(e, { notFoundMessage: "Testimonio no encontrado", context: "Error aprobando testimonio:" });
   }
 }
