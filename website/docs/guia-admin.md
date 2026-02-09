@@ -8,6 +8,7 @@ Tras iniciar sesión como admin, entra en **Admin** (enlace en el encabezado o r
 
 - **Currículo**: gestión de módulos, submódulos y lecciones.
 - **Alumnos**: listado y detalle de alumnos con su progreso.
+- **Configuración**: ajustes de la aplicación (IA, testimonios, límites, rate limit, entregas de proyectos, logros).
 - **Base de datos**: backup y restauración de la BD.
 
 ## Currículo
@@ -44,9 +45,17 @@ Desde una lección (en la lista de lecciones del módulo o submódulo) puedes en
 - **Sugerir ejercicios con IA** o **Generar ejercicios con IA** (requiere `OPENAI_API_KEY`).
 - Editar o eliminar ejercicios.
 
+## Configuración
+
+En **Admin → Configuración** hay varias pestañas: **IA** (modelo OpenAI), **Testimonios** (mínimo de lecciones, límites de texto y rol), **Límites de contenido** (límites para la IA), **Rate limit (registro)** (ventana y máximo de intentos de registro por IP), **Entregas de proyectos** y **Logros** (hitos de lecciones para logros).
+
+En la pestaña **Entregas de proyectos** se configura el **tiempo de espera para reenviar tras rechazo (horas)** (entre 1 y 168, por defecto 72). Tras rechazar una entrega de proyecto, el alumno no podrá volver a enviar hasta que pasen esas horas. El valor se guarda en la base de datos (AppConfig).
+
 ## Alumnos
 
-En **Admin → Alumnos** se muestra la lista de alumnos (nombre, email, progreso resumido). Al entrar en un alumno verás su detalle: lecciones completadas, última actividad, intentos en lecciones y ejercicios, etc.
+En **Admin → Alumnos** se muestra la lista de alumnos (nombre, email, progreso resumido). Al entrar en un alumno verás su detalle: lecciones completadas, última actividad, intentos en lecciones y ejercicios, y la sección **Entregas de proyectos**.
+
+En **Entregas de proyectos** aparece una tabla con las entregas del alumno (módulo, lección, tipo URL o archivo, enlace o descarga, fecha, estado, acciones). Los estados son: **Pendiente**, **Rechazado** o **Aprobado**. Para entregas **pendientes** puedes **Aprobar** (se registra la lección como completada y puede emitirse certificado si aplica) o **Rechazar**. Si rechazas, el alumno verá en la lección un aviso con la fecha y hora a partir de la cual podrá reenviar (según el tiempo configurado en Configuración).
 
 ## Base de datos
 

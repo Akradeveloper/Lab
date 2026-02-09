@@ -39,6 +39,8 @@ Opcional, para ejercicios de código: por defecto se usa el sandbox Piston públ
 npx prisma migrate dev
 ```
 
+Si usas **otra base de datos** (por ejemplo MySQL) con variables definidas en `.env.local`, puedes ejecutar las migraciones usando esas variables con `npm run db:migrate:local` (o `npm run db:push:local` si no necesitas historial de migraciones y solo quieres aplicar el schema). Así evitas aplicar migraciones a la BD por defecto de `.env`.
+
 5. (Opcional) Seed de currículo de ejemplo (módulo, lecciones, ejercicios):
 
 ```bash

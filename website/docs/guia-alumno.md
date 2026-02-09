@@ -40,6 +40,10 @@ Cada lección tiene:
 - **Ejercicios** al final (opción múltiple, verdadero/falso o código). Debes responderlos; si hay ejercicios, tendrás que responder correctamente para poder marcar la lección como completada.
 - Un botón para **marcar la lección como completada**. Solo se registrará como completada si has respondido bien todos los ejercicios (o si la lección no tiene ejercicios).
 
+### Lecciones de tipo proyecto
+
+Algunas lecciones son de tipo **proyecto**. En ellas debes **entregar** un proyecto mediante la **URL del repositorio** (por ejemplo GitHub) o subiendo un **archivo comprimido** (.zip, .tar.gz). La entrega queda en estado "Pendiente de revisión" hasta que un administrador la revise. Si está **aprobada**, la lección se marca como completada. Si está **rechazada**, verás un aviso indicando que debes esperar un tiempo antes de volver a enviar y la **fecha y hora a partir de la cual podrás reenviar** (ese tiempo lo configura el administrador). Pasada esa fecha podrás enviar de nuevo (URL o archivo).
+
 El progreso (lecciones completadas) se usa en el dashboard para mostrar tu siguiente lección y en Mi carrera para las métricas y gráficos.
 
 ## Perfil

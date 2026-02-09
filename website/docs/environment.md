@@ -38,6 +38,10 @@ Para usar **Judge0** self-hosted en lugar de Piston:
 
 Los pasos para montar Judge0 (p. ej. con Docker) suelen estar en el README del proyecto o en la carpeta `judge0-docker/` si existe en el repo.
 
+## Configuración desde el panel Admin
+
+Parte de la configuración no se define en variables de entorno sino en la base de datos (tabla AppConfig), y se gestiona desde **Admin → Configuración**: modelo de IA, límites de testimonios, rate limit de registro, **tiempo de espera para reenviar proyecto tras rechazo** (por defecto 72 horas), logros (hitos de lecciones), etc. El tiempo de espera para reenviar proyectos se configura en la pestaña "Entregas de proyectos".
+
 ## Primer administrador
 
 No hay variables de entorno para crear el usuario admin. El primer administrador se crea registrándose en `/register` y luego asignando el rol `ADMIN` en la base de datos. Detalle en [Getting Started](./getting-started.md#primer-administrador).
