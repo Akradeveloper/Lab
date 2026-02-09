@@ -53,6 +53,8 @@ Los tests están en la carpeta **`tests/`** en la raíz del proyecto (estructura
 
 El CI (GitHub Actions) ejecuta `npm run lint` y `npm run test:coverage` en cada push y en los PR a `develop`/`master`. Si tienes un servidor **SonarQube**, configura en el repositorio los secrets `SONAR_HOST_URL` (URL del servidor) y `SONAR_TOKEN` (token de análisis). El workflow `.github/workflows/ci.yml` enviará las métricas y la cobertura al analizar. Para ejecutar el scanner en local: instala [SonarScanner](https://docs.sonarqube.org/latest/analyzing-source-code/scanners/sonarscanner/) y ejecuta el análisis con `SONAR_HOST_URL` y `SONAR_TOKEN` en el entorno; el proyecto usa `sonar-project.properties` en la raíz.
 
+**SonarQube en Docker:** Si arrancas el stack con `docker compose up` (o `docker-compose up`), se levanta también **SonarQube** en [http://localhost:9001](http://localhost:9001). Primer acceso: usuario `admin`, contraseña `admin` (te pedirá cambiarla). Crea un proyecto o usa el existente y genera un **token** de análisis en la configuración del proyecto. Luego ejecuta `npm run test:coverage` y el scanner con `SONAR_HOST_URL=http://localhost:9001` y `SONAR_TOKEN=<token>` para enviar el análisis desde tu máquina.
+
 ## Documentación
 
 La documentación del proyecto (getting started, arquitectura, contribución) está en **Docusaurus** dentro de la carpeta `website/`:
