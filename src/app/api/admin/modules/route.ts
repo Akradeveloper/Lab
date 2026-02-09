@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { getAdminSession } from "@/lib/api-auth";
 import { badRequest, serverError, unauthorized } from "@/lib/api-responses";
-import { handlePrismaError } from "@/lib/prisma-error";
 import { prisma } from "@/lib/prisma";
 import { getOpenAIModel } from "@/lib/app-config";
 

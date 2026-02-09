@@ -16,7 +16,8 @@
     "db:restore": "tsx scripts/db-restore.ts",
     "db:migrate:local": "dotenv -e .env.local -- prisma migrate dev",
     "db:push:local": "dotenv -e .env.local -- prisma db push",
-    "sonar": "dotenv -e .env -- sh -c 'docker run --rm -e SONAR_HOST_URL -e SONAR_TOKEN -v \"$(pwd):/usr/src\" -w /usr/src sonarsource/sonar-scanner-cli'"
+    "sonar": "node scripts/sonar.js",
+    "sonar:mac": "dotenv -e .env -- sh -c 'docker run --rm -e SONAR_HOST_URL -e SONAR_TOKEN -v \"$(pwd):/usr/src\" -w /usr/src sonarsource/sonar-scanner-cli'"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
@@ -54,6 +55,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "@rollup/rollup-win32-x64-msvc": "^4.0.18"
   }
 }

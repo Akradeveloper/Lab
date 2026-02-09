@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/api-auth";
-import { badRequest, serverError, unauthorized } from "@/lib/api-responses";
+import { badRequest, unauthorized } from "@/lib/api-responses";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { prisma } from "@/lib/prisma";
 

@@ -29,10 +29,10 @@ export function useTheme() {
  * Aplica/retira la clase `dark` en <html>.
  */
 function getInitialTheme(): Theme {
-  if (typeof window === "undefined") return "dark";
+  if (globalThis.window === undefined) return "dark";
   const stored = localStorage.getItem("qa-lab-theme") as Theme | null;
   if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
+  return globalThis.matchMedia("(prefers-color-scheme: dark)").matches
     ? "dark"
     : "light";
 }
