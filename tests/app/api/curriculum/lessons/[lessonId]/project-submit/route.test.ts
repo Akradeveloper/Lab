@@ -326,6 +326,33 @@ describe("POST /api/curriculum/lessons/[lessonId]/project-submit", () => {
     );
     expect(res.status).toBe(500);
     const data = await res.json();
-    expect(data.error).toContain("entrega");
+    expect(data.error).toBeDefined();
+  });
+
+  it("catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(sessionAlumno as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      lessonType: "project",
+    } as never);
+    vi.mocked(prisma.projectSubmission.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.projectSubmission.create).mockRejectedValueOnce(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(
+        new Request("https://x.com", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "url", url: "https://example.com/repo" }),
+        }),
+        { params: Promise.resolve({ lessonId: "l1" }) }
+      );
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
   });
 });

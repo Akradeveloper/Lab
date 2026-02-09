@@ -51,4 +51,34 @@ describe("GET /api/testimonials", () => {
     const data = await res.json();
     expect(data.error).toBe("Error al cargar testimonios");
   });
+
+  it("L29: ejecuta console.error en catch cuando findMany falla y NODE_ENV no production", async () => {
+    vi.mocked(prisma.testimonial.findMany).mockRejectedValueOnce(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "development");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await GET();
+      expect(res.status).toBe(500);
+      const data = await res.json();
+      expect(data.error).toBe("Error al cargar testimonios");
+      expect(consoleSpy).toHaveBeenCalledWith("Error listando testimonios:", expect.any(Error));
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("cuando findMany falla con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(prisma.testimonial.findMany).mockRejectedValueOnce(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await GET();
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
 });

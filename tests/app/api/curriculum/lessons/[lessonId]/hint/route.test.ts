@@ -203,7 +203,7 @@ describe("POST /api/curriculum/lessons/[lessonId]/hint", () => {
     vi.unstubAllGlobals();
   });
 
-  it("devuelve 200 con MULTIPLE_CHOICE cuando options no es JSON válido (catch interno)", async () => {
+  it("devuelve 200 con MULTIPLE_CHOICE cuando options no es JSON válido (catch interno L65-67)", async () => {
     vi.mocked(getServerSession).mockResolvedValue(session as never);
     vi.stubEnv("OPENAI_API_KEY", "");
     vi.mocked(prisma.exercise.findFirst).mockResolvedValue({
@@ -225,5 +225,116 @@ describe("POST /api/curriculum/lessons/[lessonId]/hint", () => {
     expect(data.hint).toBeDefined();
     expect(typeof data.hint).toBe("string");
     vi.unstubAllEnvs();
+  });
+
+  it("L65-67: MULTIPLE_CHOICE con options no JSON y API key (ejecuta catch de JSON.parse)", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(session as never);
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    vi.mocked(prisma.exercise.findFirst).mockResolvedValue({
+      id: "ex1",
+      type: "MULTIPLE_CHOICE",
+      question: "¿Cuál?",
+      options: "not-valid-json",
+      correctAnswer: "0",
+    } as never);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ choices: [{ message: { content: "Pista" } }] }),
+    }));
+    const res = await POST(
+      new Request("https://x.com", {
+        method: "POST",
+        body: JSON.stringify({ exerciseId: "ex1" }),
+      }),
+      { params: Promise.resolve({ lessonId: "l1" }) }
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.hint).toBe("Pista");
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("L127: devuelve pista default para tipo de ejercicio no TRUE_FALSE/MULTIPLE_CHOICE/CODE", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(session as never);
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.mocked(prisma.exercise.findFirst).mockResolvedValue({
+      id: "ex1",
+      type: "DESARROLLO",
+      question: "Desarrolla el tema",
+      options: "{}",
+      correctAnswer: "",
+    } as never);
+    const res = await POST(
+      new Request("https://x.com", {
+        method: "POST",
+        body: JSON.stringify({ exerciseId: "ex1" }),
+      }),
+      { params: Promise.resolve({ lessonId: "l1" }) }
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.hint).toContain("Relee la teoría");
+    vi.unstubAllEnvs();
+  });
+
+  it("catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(session as never);
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.mocked(prisma.exercise.findFirst).mockResolvedValue({
+      id: "ex1",
+      type: "TRUE_FALSE",
+      question: "P?",
+      options: null,
+      correctAnswer: "true",
+    } as never);
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network error")));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(
+        new Request("https://x.com", {
+          method: "POST",
+          body: JSON.stringify({ exerciseId: "ex1" }),
+        }),
+        { params: Promise.resolve({ lessonId: "l1" }) }
+      );
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("L102-109: ejecuta console.error en catch cuando fetch falla y NODE_ENV no production", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(session as never);
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    vi.stubEnv("NODE_ENV", "development");
+    vi.mocked(prisma.exercise.findFirst).mockResolvedValue({
+      id: "ex1",
+      type: "TRUE_FALSE",
+      question: "P?",
+      options: null,
+      correctAnswer: "true",
+    } as never);
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network error")));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(
+        new Request("https://x.com", {
+          method: "POST",
+          body: JSON.stringify({ exerciseId: "ex1" }),
+        }),
+        { params: Promise.resolve({ lessonId: "l1" }) }
+      );
+      expect(res.status).toBe(500);
+      expect(consoleSpy).toHaveBeenCalledWith("Error generando pista:", expect.any(Error));
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+      consoleSpy.mockRestore();
+    }
   });
 });

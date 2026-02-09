@@ -130,14 +130,73 @@ describe("POST /api/admin/project-submissions/[submissionId]/approve", () => {
     vi.mocked(prisma.progress.findMany).mockResolvedValue([{ lessonId: "l1" }] as never);
     vi.mocked(prisma.certificate.findUnique).mockResolvedValue(null);
     vi.mocked(prisma.certificate.create).mockRejectedValue(new Error("cert create failed"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "development");
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const res = await POST(new Request("https://x.com"), {
-      params: Promise.resolve({ submissionId: "s1" }),
-    });
-    expect(res.status).toBe(200);
-    const data = await res.json();
-    expect(data.ok).toBe(true);
-    expect(consoleSpy).toHaveBeenCalledWith("Error al verificar/emitir certificado:", expect.any(Error));
-    consoleSpy.mockRestore();
+    try {
+      const res = await POST(new Request("https://x.com"), {
+        params: Promise.resolve({ submissionId: "s1" }),
+      });
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.ok).toBe(true);
+      expect(consoleSpy).toHaveBeenCalledWith("Error al verificar/emitir certificado:", expect.any(Error));
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("catch certificado con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.projectSubmission.findUnique).mockResolvedValue({
+      id: "s1",
+      userId: "u1",
+      lessonId: "l1",
+      status: "PENDING",
+      lesson: { id: "l1", moduleId: "m1", submodule: { moduleId: "m1" } },
+    } as never);
+    vi.mocked(prisma.projectSubmission.update).mockResolvedValue({} as never);
+    vi.mocked(prisma.progress.findFirst).mockResolvedValue(null);
+    vi.mocked(prisma.progress.create).mockResolvedValue({} as never);
+    vi.mocked(prisma.lesson.findMany).mockResolvedValue([{ id: "l1" }] as never);
+    vi.mocked(prisma.progress.findMany).mockResolvedValue([{ lessonId: "l1" }] as never);
+    vi.mocked(prisma.certificate.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.certificate.create).mockRejectedValue(new Error("cert err"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(new Request("https://x.com"), {
+        params: Promise.resolve({ submissionId: "s1" }),
+      });
+      expect(res.status).toBe(200);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("catch externo con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.projectSubmission.findUnique).mockResolvedValue({
+      id: "s1",
+      userId: "u1",
+      lessonId: "l1",
+      status: "PENDING",
+      lesson: { id: "l1", moduleId: "m1", submodule: { moduleId: "m1" } },
+    } as never);
+    vi.mocked(prisma.projectSubmission.update).mockRejectedValue(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(new Request("https://x.com"), {
+        params: Promise.resolve({ submissionId: "s1" }),
+      });
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
   });
 });

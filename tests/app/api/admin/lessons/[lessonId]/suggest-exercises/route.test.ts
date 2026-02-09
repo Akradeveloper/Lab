@@ -159,12 +159,42 @@ describe("GET /api/admin/lessons/[lessonId]/suggest-exercises", () => {
       submodule: { id: "s1" },
     } as never);
     suggestExercisesCreateMock.mockRejectedValueOnce(new Error("OpenAI API error"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "development");
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const res = await GET(new Request("https://x.com"), {
-      params: Promise.resolve({ lessonId: "l1" }),
-    });
-    expect(res.status).toBe(500);
-    expect(consoleSpy).toHaveBeenCalledWith("Error al obtener sugerencias de ejercicios:", expect.any(Error));
-    consoleSpy.mockRestore();
+    try {
+      const res = await GET(new Request("https://x.com"), {
+        params: Promise.resolve({ lessonId: "l1" }),
+      });
+      expect(res.status).toBe(500);
+      expect(consoleSpy).toHaveBeenCalledWith("Error al obtener sugerencias de ejercicios:", expect.any(Error));
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      title: "Lección",
+      content: "Contenido",
+      submoduleId: "s1",
+      order: 0,
+      submodule: { id: "s1" },
+    } as never);
+    suggestExercisesCreateMock.mockRejectedValueOnce(new Error("API error"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await GET(new Request("https://x.com"), {
+        params: Promise.resolve({ lessonId: "l1" }),
+      });
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
   });
 });

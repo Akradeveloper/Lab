@@ -156,6 +156,30 @@ describe("POST /api/curriculum/lessons/[lessonId]/complete", () => {
     expect(data.error).toBe("Error al guardar el progreso");
   });
 
+  it("catch externo con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(sessionAlumno as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      lessonType: "standard",
+      moduleId: "m1",
+      submodule: null,
+    } as never);
+    vi.mocked(prisma.progress.findFirst).mockResolvedValue(null);
+    vi.mocked(prisma.progress.create).mockRejectedValueOnce(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(new Request("https://x.com"), {
+        params: Promise.resolve({ lessonId: "l1" }),
+      });
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
   it("devuelve 200 sin certificateId cuando el bloque de certificado lanza (catch interno)", async () => {
     vi.mocked(getServerSession).mockResolvedValue(sessionAlumno as never);
     vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
@@ -176,5 +200,35 @@ describe("POST /api/curriculum/lessons/[lessonId]/complete", () => {
     const data = await res.json();
     expect(data.ok).toBe(true);
     expect(data.certificateId).toBeNull();
+  });
+
+  it("catch certificado con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(sessionAlumno as never);
+    vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+      id: "l1",
+      lessonType: "standard",
+      moduleId: "m1",
+      submodule: null,
+    } as never);
+    vi.mocked(prisma.progress.findFirst).mockResolvedValue(null);
+    vi.mocked(prisma.progress.create).mockResolvedValue({} as never);
+    vi.mocked(prisma.lesson.findMany).mockResolvedValue([{ id: "l1" }] as never);
+    vi.mocked(prisma.progress.findMany).mockResolvedValue([{ lessonId: "l1" }] as never);
+    vi.mocked(prisma.certificate.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.certificate.create).mockRejectedValueOnce(new Error("Cert DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(new Request("https://x.com"), {
+        params: Promise.resolve({ lessonId: "l1" }),
+      });
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.certificateId).toBeNull();
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
   });
 });

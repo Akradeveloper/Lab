@@ -52,4 +52,18 @@ describe("env", () => {
       /DATABASE_URL o \(DB_HOST/
     );
   });
+
+  it("L16: hasDatabaseConfig usa dbVars.every (DB_* cuando DATABASE_URL no está)", async () => {
+    process.env.NEXTAUTH_SECRET = "s";
+    process.env.NEXTAUTH_URL = "http://localhost:3000";
+    process.env.DATABASE_URL = "";
+    process.env.DB_HOST = "h";
+    process.env.DB_NAME = "d";
+    process.env.DB_PASSWORD = "p";
+    process.env.DB_PORT = "3306";
+    process.env.DB_USER = "u";
+    delete process.env.NEXT_PHASE;
+    const { env } = await import("@/lib/env");
+    expect(env.DATABASE_URL).toBe("file:./prisma/dev.db");
+  });
 });

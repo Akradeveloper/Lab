@@ -174,4 +174,57 @@ describe("POST /api/admin/modules/[moduleId]/submodules", () => {
     const data = await res.json();
     expect(data.error).toContain("Error al crear el submódulo");
   });
+
+  it("catch interno (generar descripción IA) con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      _count: { lessons: 0 },
+    } as never);
+    submodulesOpenaiCreateMock.mockRejectedValueOnce(new Error("API error"));
+    vi.mocked(prisma.submodule.create).mockResolvedValue({
+      id: "sub1",
+      moduleId: "m1",
+      title: "Sub",
+      description: null,
+      order: 0,
+    } as never);
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(
+        new Request("https://x.com", { method: "POST", body: JSON.stringify({ title: "Sub" }) }),
+        { params: Promise.resolve({ moduleId: "m1" }) }
+      );
+      expect(res.status).toBe(200);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("catch externo (crear submódulo) con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      _count: { lessons: 0 },
+    } as never);
+    vi.mocked(prisma.submodule.create).mockRejectedValue(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(
+        new Request("https://x.com", { method: "POST", body: JSON.stringify({ title: "Sub" }) }),
+        { params: Promise.resolve({ moduleId: "m1" }) }
+      );
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
 });

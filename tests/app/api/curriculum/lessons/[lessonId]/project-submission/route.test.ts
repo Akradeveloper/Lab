@@ -137,4 +137,21 @@ describe("GET /api/curriculum/lessons/[lessonId]/project-submission", () => {
     const data = await res.json();
     expect(data.error).toContain("entrega");
   });
+
+  it("catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(session as never);
+    vi.mocked(prisma.lesson.findUnique).mockRejectedValueOnce(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await GET(new Request("https://x.com"), {
+        params: Promise.resolve({ lessonId: "l1" }),
+      });
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
 });

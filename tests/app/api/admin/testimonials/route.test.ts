@@ -78,4 +78,40 @@ describe("GET /api/admin/testimonials", () => {
     const data = await res.json();
     expect(data.error).toContain("cargar testimonios");
   });
+
+  it("L33: ejecuta console.error en catch cuando findMany falla y NODE_ENV no production", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "admin1", email: "admin@b.com", role: "ADMIN", name: "Admin" },
+      expires: "",
+    } as never);
+    vi.mocked(prisma.testimonial.findMany).mockRejectedValueOnce(new Error("DB error"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "development");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await GET();
+      expect(res.status).toBe(500);
+      expect(consoleSpy).toHaveBeenCalledWith("Error listando testimonios admin:", expect.any(Error));
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "admin1", email: "admin@b.com", role: "ADMIN", name: "Admin" },
+      expires: "",
+    } as never);
+    vi.mocked(prisma.testimonial.findMany).mockRejectedValueOnce(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await GET();
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
 });

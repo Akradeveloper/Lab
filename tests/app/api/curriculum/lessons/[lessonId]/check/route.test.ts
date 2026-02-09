@@ -240,4 +240,47 @@ describe("POST /api/curriculum/lessons/[lessonId]/check", () => {
     const broken = data.results.find((r: { exerciseId: string }) => r.exerciseId === "exBroken");
     expect(broken).toEqual({ exerciseId: "exBroken", correct: false });
   });
+
+  it("catch interno (guardar intentos) con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(session as never);
+    vi.mocked(prisma.exercise.findMany).mockResolvedValue([{ id: "ex1", type: "TRUE_FALSE", correctAnswer: "true", order: 0 }] as never);
+    vi.mocked(prisma.lessonCheckAttempt.create).mockRejectedValue(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(
+        new Request("https://x.com", {
+          method: "POST",
+          body: JSON.stringify({ answers: { ex1: true } }),
+        }),
+        { params: Promise.resolve({ lessonId: "l1" }) }
+      );
+      expect(res.status).toBe(200);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("catch externo con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getServerSession).mockResolvedValue(session as never);
+    vi.mocked(prisma.exercise.findMany).mockRejectedValue(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(
+        new Request("https://x.com", {
+          method: "POST",
+          body: JSON.stringify({ answers: {} }),
+        }),
+        { params: Promise.resolve({ lessonId: "l1" }) }
+      );
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
 });

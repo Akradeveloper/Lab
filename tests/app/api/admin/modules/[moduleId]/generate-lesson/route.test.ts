@@ -212,4 +212,28 @@ describe("POST /api/admin/modules/[moduleId]/generate-lesson", () => {
     const data = await res.json();
     expect(data.error).toMatch(/JSON|válido/);
   });
+
+  it("catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      description: null,
+      _count: { submodules: 0 },
+    } as never);
+    genLessonCreateMock.mockRejectedValueOnce(new Error("API error"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(
+        new Request("https://x.com", { method: "POST", body: JSON.stringify({ topic: "Tema" }) }),
+        { params: Promise.resolve({ moduleId: "m1" }) }
+      );
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
 });

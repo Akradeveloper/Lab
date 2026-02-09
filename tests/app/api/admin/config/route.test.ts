@@ -94,6 +94,41 @@ describe("GET /api/admin/config", () => {
       consoleSpy.mockRestore();
     }
   });
+
+  it("GET catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(getConfigValue).mockRejectedValueOnce(new Error("DB error"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await GET();
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("L136: console.error en catch GET tras stubEnv y re-import de la ruta", async () => {
+    const restoreEnv = vi.stubEnv("NODE_ENV", "development");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      vi.resetModules();
+      const { getAdminSession: getAdminSessionReloaded } = await import("@/lib/api-auth");
+      const { getConfigValue: getConfigValueReloaded } = await import("@/lib/app-config");
+      vi.mocked(getAdminSessionReloaded).mockResolvedValue(adminSession as never);
+      vi.mocked(getConfigValueReloaded).mockRejectedValueOnce(new Error("DB error"));
+      const { GET: GETReloaded } = await import("@/app/api/admin/config/route");
+      const res = await GETReloaded();
+      expect(res.status).toBe(500);
+      expect(consoleSpy).toHaveBeenCalledWith("Error leyendo config:", expect.any(Error));
+    } finally {
+      vi.resetModules();
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
 });
 
 describe("PATCH /api/admin/config", () => {
@@ -262,6 +297,53 @@ describe("PATCH /api/admin/config", () => {
     expect(data.detail).toBe("Rate limit");
   });
 
+  it("devuelve 400 cuando testFirst true y OpenAI rechaza con valor no Error (L211 rama msg genérica)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const orig = process.env.OPENAI_API_KEY;
+    process.env.OPENAI_API_KEY = "sk-test";
+    configOpenaiCreateMock.mockRejectedValueOnce("string error");
+    const res = await PATCH(
+      new Request("https://x.com", {
+        method: "PATCH",
+        body: JSON.stringify({
+          updates: { openai_model: "gpt-4o-mini" },
+          testFirst: true,
+        }),
+      })
+    );
+    process.env.OPENAI_API_KEY = orig;
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("prueba del modelo falló");
+    expect(data.detail).toBe("Error al probar el modelo");
+  });
+
+  it("devuelve 400 cuando achievement_milestones no es array (L249-250)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const res = await PATCH(
+      new Request("https://x.com", {
+        method: "PATCH",
+        body: JSON.stringify({ updates: { achievement_milestones: "not-array" } }),
+      })
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("achievement_milestones");
+  });
+
+  it("devuelve 400 cuando achievement_milestones es array con elemento no numérico (L250 arr.every false)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    const res = await PATCH(
+      new Request("https://x.com", {
+        method: "PATCH",
+        body: JSON.stringify({ updates: { achievement_milestones: [1, NaN, 10] } }),
+      })
+    );
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain("achievement_milestones");
+  });
+
   it("devuelve 400 cuando la suma de límites de contenido supera la capacidad del modelo", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
     vi.mocked(getAppConfigNumber).mockImplementation(async (key: string) => {
@@ -320,6 +402,52 @@ describe("PATCH /api/admin/config", () => {
     expect(data.ok).toBe(true);
   });
 
+  it("devuelve 200 solo con límites sin openai_model (effectiveModel vía getOpenAIModel, L268-284)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(getAppConfigNumber).mockImplementation(async (key: string) => {
+      if (key === "max_prev_content_length") return 1000;
+      if (key === "max_suggest_content_length") return 1000;
+      if (key === "max_prev_title_length") return 100;
+      return 10;
+    });
+    const res = await PATCH(
+      new Request("https://x.com", {
+        method: "PATCH",
+        body: JSON.stringify({
+          updates: { max_suggest_content_length: 1500 },
+        }),
+      })
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.ok).toBe(true);
+  });
+
+  it("devuelve 200 con varias claves de límite (hasLimitUpdate y bucle upsert L268-323)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(getAppConfigNumber).mockImplementation(async (key: string) => {
+      if (key === "max_prev_content_length") return 1000;
+      if (key === "max_suggest_content_length") return 1000;
+      if (key === "max_prev_title_length") return 100;
+      return 10;
+    });
+    const res = await PATCH(
+      new Request("https://x.com", {
+        method: "PATCH",
+        body: JSON.stringify({
+          updates: {
+            max_prev_content_length: 1500,
+            max_suggest_content_length: 1500,
+            max_prev_title_length: 100,
+          },
+        }),
+      })
+    );
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.ok).toBe(true);
+  });
+
   it("ejecuta el bloque catch del PATCH cuando upsert falla (NODE_ENV no production)", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
     vi.mocked(prisma.appConfig.upsert).mockRejectedValueOnce(new Error("DB"));
@@ -334,6 +462,26 @@ describe("PATCH /api/admin/config", () => {
       );
       expect(res.status).toBe(500);
       expect(consoleSpy).toHaveBeenCalledWith("Error actualizando config:", expect.any(Error));
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("PATCH catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.appConfig.upsert).mockRejectedValueOnce(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await PATCH(
+        new Request("https://x.com", {
+          method: "PATCH",
+          body: JSON.stringify({ updates: { default_exercise_count: 5 } }),
+        })
+      );
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
     } finally {
       typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();

@@ -165,6 +165,33 @@ describe("POST /api/admin/submodules/[submoduleId]/suggest-lessons-order", () =>
     expect(data.error).toContain("orden");
   });
 
+  it("catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.submodule.findUnique).mockResolvedValue({
+      id: "s1",
+      title: "Sub",
+      description: null,
+      module: { title: "M1", description: null },
+    } as never);
+    vi.mocked(prisma.lesson.findMany).mockResolvedValue([
+      { id: "l1", title: "L1", content: "", difficulty: null },
+      { id: "l2", title: "L2", content: "", difficulty: null },
+    ] as never);
+    openaiCreateMock.mockRejectedValueOnce(new Error("API error"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(new Request("https://x.com"), {
+        params: Promise.resolve({ submoduleId: "s1" }),
+      });
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
   it("devuelve 503 cuando OPENAI_API_KEY no está configurada", async () => {
     vi.stubEnv("OPENAI_API_KEY", "");
     vi.resetModules();

@@ -82,4 +82,32 @@ describe("POST /api/admin/modules/generate-description", () => {
     const data = await res.json();
     expect(data.error).toContain("Error al generar la descripción con IA");
   });
+
+  it("catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    genDescCreateMock.mockRejectedValueOnce(new Error("API error"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(
+        new Request("https://x.com", { method: "POST", body: JSON.stringify({ title: "M1" }) })
+      );
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("devuelve 502 cuando la IA no devuelve description (L46)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    genDescCreateMock.mockResolvedValueOnce({ choices: [{ message: { content: null } }] });
+    const res = await POST(
+      new Request("https://x.com", { method: "POST", body: JSON.stringify({ title: "M1" }) })
+    );
+    expect(res.status).toBe(502);
+    const data = await res.json();
+    expect(data.error).toContain("No se pudo generar la descripción");
+  });
 });
