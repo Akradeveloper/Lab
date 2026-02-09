@@ -58,8 +58,19 @@ export default async function ModuloPage({ params, searchParams }: Props) {
   });
 
   const completedLessonIds = new Set(progress.map((p) => p.lessonId));
-  let totalCount = 0;
-  let completedCount = 0;
+  const { totalCount, completedCount } = module_.submodules.reduce(
+    (acc, sub) => {
+      const subTotal = sub.lessons.length;
+      const subCompleted = sub.lessons.filter((l) =>
+        completedLessonIds.has(l.id)
+      ).length;
+      return {
+        totalCount: acc.totalCount + subTotal,
+        completedCount: acc.completedCount + subCompleted,
+      };
+    },
+    { totalCount: 0, completedCount: 0 }
+  );
   const isAdmin = session.user.role === "ADMIN";
 
   const hasSubmodules = module_.submodules.length > 0;
@@ -97,8 +108,6 @@ export default async function ModuloPage({ params, searchParams }: Props) {
                 completedLessonIds.has(l.id)
               ).length;
               const subTotal = sub.lessons.length;
-              totalCount += subTotal;
-              completedCount += subCompleted;
               return (
                 <div
                   key={sub.id}

@@ -238,10 +238,6 @@ export default async function DashboardPage() {
     modules.length
   );
 
-  const moduleTitleForNext = nextLesson
-    ? modules.find((m) => m.id === nextLesson.moduleId)?.title ?? ""
-    : "";
-
   const { contextTitle: activeContextTitle, lessons: pathLessons } =
     getActiveContextPath(
       nextLesson,

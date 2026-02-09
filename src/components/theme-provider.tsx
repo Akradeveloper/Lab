@@ -28,18 +28,17 @@ export function useTheme() {
  * Lee la preferencia guardada en localStorage o del sistema operativo.
  * Aplica/retira la clase `dark` en <html>.
  */
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
+function getInitialTheme(): Theme {
+  if (typeof window === "undefined") return "dark";
+  const stored = localStorage.getItem("qa-lab-theme") as Theme | null;
+  if (stored === "light" || stored === "dark") return stored;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
 
-  // Leer preferencia al montar (solo cliente)
-  useEffect(() => {
-    const stored = localStorage.getItem("qa-lab-theme") as Theme | null;
-    if (stored === "light" || stored === "dark") {
-      setTheme(stored);
-    } else if (!window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      setTheme("light");
-    }
-  }, []);
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
   // Sincronizar clase en <html> y localStorage
   useEffect(() => {

@@ -2,7 +2,7 @@
  * Exportación e importación de backup en formato JSON para MySQL.
  * Usado por la API admin y por los scripts db-backup / db-restore.
  */
-import type { PrismaClient } from "@prisma/client";
+import type { PrismaClient, Prisma } from "@prisma/client";
 
 export const BACKUP_SCHEMA_VERSION = 1;
 
@@ -77,31 +77,43 @@ export async function restoreFromJson(prisma: PrismaClient, json: unknown): Prom
     await tx.user.deleteMany();
 
     if (data.User.length > 0) {
-      await tx.user.createMany({ data: data.User as any });
+      await tx.user.createMany({
+        data: data.User as Prisma.UserCreateManyInput[],
+      });
     }
     if (data.Module.length > 0) {
-      await tx.module.createMany({ data: data.Module as any });
+      await tx.module.createMany({
+        data: data.Module as Prisma.ModuleCreateManyInput[],
+      });
     }
     if (data.Submodule.length > 0) {
-      await tx.submodule.createMany({ data: data.Submodule as any });
+      await tx.submodule.createMany({
+        data: data.Submodule as Prisma.SubmoduleCreateManyInput[],
+      });
     }
     if (data.Lesson.length > 0) {
-      await tx.lesson.createMany({ data: data.Lesson as any });
+      await tx.lesson.createMany({
+        data: data.Lesson as Prisma.LessonCreateManyInput[],
+      });
     }
     if (data.Exercise.length > 0) {
-      await tx.exercise.createMany({ data: data.Exercise as any });
+      await tx.exercise.createMany({
+        data: data.Exercise as Prisma.ExerciseCreateManyInput[],
+      });
     }
     if (data.Progress.length > 0) {
-      await tx.progress.createMany({ data: data.Progress as any });
+      await tx.progress.createMany({
+        data: data.Progress as Prisma.ProgressCreateManyInput[],
+      });
     }
     if (data.LessonCheckAttempt.length > 0) {
       await tx.lessonCheckAttempt.createMany({
-        data: data.LessonCheckAttempt as any,
+        data: data.LessonCheckAttempt as Prisma.LessonCheckAttemptCreateManyInput[],
       });
     }
     if (data.ExerciseAttempt.length > 0) {
       await tx.exerciseAttempt.createMany({
-        data: data.ExerciseAttempt as any,
+        data: data.ExerciseAttempt as Prisma.ExerciseAttemptCreateManyInput[],
       });
     }
   });

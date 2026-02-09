@@ -16,7 +16,11 @@ type ExerciseItem = {
 
 type Props = { moduleId: string; lessonId: string; lessonTitle: string };
 
-export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
+export function AdminExercisesList({
+  moduleId: _moduleId,
+  lessonId,
+  lessonTitle: _lessonTitle,
+}: Props) {
   const [exercises, setExercises] = useState<ExerciseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -70,7 +74,24 @@ export function AdminExercisesList({ moduleId, lessonId, lessonTitle }: Props) {
   }
 
   useEffect(() => {
-    loadExercises();
+    let cancelled = false;
+    void (async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch(`/api/admin/lessons/${lessonId}/exercises`);
+        if (!res.ok) throw new Error("Error al cargar ejercicios");
+        const data = await res.json();
+        if (!cancelled) setExercises(data);
+      } catch {
+        if (!cancelled) setError("No se pudo cargar el listado");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [lessonId]);
 
   const CODE_LANGUAGES = [

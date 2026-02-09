@@ -43,8 +43,8 @@ const flatMode = (submoduleId: string | null) => submoduleId == null;
 export function AdminLessonsList({
   moduleId,
   submoduleId,
-  moduleTitle,
-  submoduleTitle,
+  moduleTitle: _moduleTitle,
+  submoduleTitle: _submoduleTitle,
 }: Props) {
   const [lessons, setLessons] = useState<LessonItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +92,24 @@ export function AdminLessonsList({
   }
 
   useEffect(() => {
-    loadLessons();
+    let cancelled = false;
+    void (async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch(lessonsUrl);
+        if (!res.ok) throw new Error("Error al cargar lecciones");
+        const data = await res.json();
+        if (!cancelled) setLessons(data);
+      } catch {
+        if (!cancelled) setError("No se pudo cargar el listado");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [lessonsUrl]);
 
   function openCreate() {

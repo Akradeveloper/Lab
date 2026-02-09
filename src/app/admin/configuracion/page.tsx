@@ -101,11 +101,15 @@ export default function AdminConfiguracionPage() {
         Configuración
       </h1>
 
-      <div className="flex flex-wrap gap-2 border-b border-border mb-6">
+      <div
+        className="flex flex-wrap gap-2 border-b border-border mb-6"
+        role="tablist"
+      >
         {TABS.map(({ id, label }) => (
           <button
             key={id}
             type="button"
+            role="tab"
             onClick={() => setActiveTab(id)}
             className={`px-4 py-2 text-sm font-medium rounded-t transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
               activeTab === id

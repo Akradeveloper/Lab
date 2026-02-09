@@ -1,6 +1,5 @@
 import { getServerSession } from "next-auth";
 import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { Header } from "@/components/Header";
 import { getPreviousLessonIdsInModule } from "@/lib/lesson-order";

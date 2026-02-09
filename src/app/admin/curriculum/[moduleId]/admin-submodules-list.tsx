@@ -15,7 +15,10 @@ type SubmoduleItem = {
 
 type Props = { moduleId: string; moduleTitle: string };
 
-export function AdminSubmodulesList({ moduleId, moduleTitle }: Props) {
+export function AdminSubmodulesList({
+  moduleId,
+  moduleTitle: _moduleTitle,
+}: Props) {
   const [submodules, setSubmodules] = useState<SubmoduleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -41,7 +44,24 @@ export function AdminSubmodulesList({ moduleId, moduleTitle }: Props) {
   }
 
   useEffect(() => {
-    loadSubmodules();
+    let cancelled = false;
+    void (async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch(`/api/admin/modules/${moduleId}/submodules`);
+        if (!res.ok) throw new Error("Error al cargar submódulos");
+        const data = await res.json();
+        if (!cancelled) setSubmodules(data);
+      } catch {
+        if (!cancelled) setError("No se pudo cargar el listado");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [moduleId]);
 
   function openCreate() {
