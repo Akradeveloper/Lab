@@ -14,6 +14,7 @@ export type ConfigState = {
   default_exercise_count: number;
   rate_limit_window_minutes: number;
   rate_limit_max_requests: number;
+  project_submission_cooldown_hours: number;
   achievement_milestones: number[];
 };
 
@@ -22,6 +23,7 @@ const TABS = [
   { id: "testimonios", label: "Testimonios" },
   { id: "limites", label: "Límites de contenido" },
   { id: "rate-limit", label: "Rate limit (registro)" },
+  { id: "proyectos", label: "Entregas de proyectos" },
   { id: "logros", label: "Logros" },
 ] as const;
 
@@ -65,6 +67,9 @@ export default function AdminConfiguracionPage() {
             data.rate_limit_window_minutes ?? 15
           ),
           rate_limit_max_requests: Number(data.rate_limit_max_requests ?? 5),
+          project_submission_cooldown_hours: Number(
+            data.project_submission_cooldown_hours ?? 72
+          ),
           achievement_milestones: Array.isArray(data.achievement_milestones)
             ? data.achievement_milestones.map(Number).filter(Number.isFinite)
             : [1, 5, 10, 25, 50],

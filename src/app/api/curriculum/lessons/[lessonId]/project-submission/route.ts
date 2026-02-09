@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import { getAppConfigNumber } from "@/lib/app-config";
 import { prisma } from "@/lib/prisma";
 
 type Params = { params: Promise<{ lessonId: string }> };
@@ -42,16 +43,39 @@ export async function GET(_request: Request, { params }: Params) {
       return NextResponse.json({ submission: null });
     }
 
-    return NextResponse.json({
-      submission: {
-        id: submission.id,
-        status: submission.status,
-        submissionType: submission.submissionType,
-        url: submission.url ?? undefined,
-        submittedAt: submission.submittedAt,
-        approvedAt: submission.approvedAt ?? undefined,
-      },
-    });
+    const base = {
+      id: submission.id,
+      status: submission.status,
+      submissionType: submission.submissionType,
+      url: submission.url ?? undefined,
+      submittedAt: submission.submittedAt,
+      approvedAt: submission.approvedAt ?? undefined,
+      rejectedAt: submission.rejectedAt ?? undefined,
+    };
+
+    if (
+      submission.status === "REJECTED" &&
+      submission.rejectedAt
+    ) {
+      const cooldownHours = await getAppConfigNumber(
+        "project_submission_cooldown_hours",
+        72
+      );
+      const cooldownMs = cooldownHours * 60 * 60 * 1000;
+      const canRetryAt = new Date(
+        submission.rejectedAt.getTime() + cooldownMs
+      );
+      return NextResponse.json({
+        submission: {
+          ...base,
+          rejectedAt:
+            submission.rejectedAt.toISOString(),
+          canRetryAt: canRetryAt.toISOString(),
+        },
+      });
+    }
+
+    return NextResponse.json({ submission: base });
   } catch (e) {
     if (process.env.NODE_ENV !== "production") {
       console.error("Error al obtener entrega:", e);

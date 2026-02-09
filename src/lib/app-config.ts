@@ -16,6 +16,7 @@ export const DEFAULT_MAX_PREV_TITLE_LENGTH = 80;
 export const DEFAULT_EXERCISE_COUNT = 5;
 export const DEFAULT_RATE_LIMIT_WINDOW_MINUTES = 15;
 export const DEFAULT_RATE_LIMIT_MAX_REQUESTS = 5;
+export const DEFAULT_PROJECT_SUBMISSION_COOLDOWN_HOURS = 72;
 export const DEFAULT_ACHIEVEMENT_MILESTONES = [1, 5, 10, 25, 50] as number[];
 
 /** Claves conocidas para GET /api/admin/config */
@@ -30,6 +31,7 @@ export const CONFIG_KEYS = [
   "default_exercise_count",
   "rate_limit_window_minutes",
   "rate_limit_max_requests",
+  "project_submission_cooldown_hours",
   "achievement_milestones",
 ] as const;
 
@@ -46,6 +48,7 @@ const FALLBACK_MAP: Record<string, string> = {
   default_exercise_count: String(DEFAULT_EXERCISE_COUNT),
   rate_limit_window_minutes: String(DEFAULT_RATE_LIMIT_WINDOW_MINUTES),
   rate_limit_max_requests: String(DEFAULT_RATE_LIMIT_MAX_REQUESTS),
+  project_submission_cooldown_hours: String(DEFAULT_PROJECT_SUBMISSION_COOLDOWN_HOURS),
   achievement_milestones: JSON.stringify(DEFAULT_ACHIEVEMENT_MILESTONES),
 };
 
@@ -125,6 +128,7 @@ export async function getConfigValue(
     "default_exercise_count",
     "rate_limit_window_minutes",
     "rate_limit_max_requests",
+    "project_submission_cooldown_hours",
   ];
   if (numKeys.includes(key)) {
     return getAppConfigNumber(key, Number(fallback));

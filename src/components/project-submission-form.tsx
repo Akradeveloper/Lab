@@ -10,6 +10,8 @@ type Submission = {
   url?: string;
   submittedAt: string;
   approvedAt?: string;
+  rejectedAt?: string;
+  canRetryAt?: string;
 };
 
 type Props = {
@@ -23,7 +25,7 @@ export function ProjectSubmissionForm({ lessonId }: Props) {
   );
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<"url" | "file">("url");
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -205,8 +207,114 @@ export function ProjectSubmissionForm({ lessonId }: Props) {
               </span>
               <input
                 type="url"
-                value={url ?? ""}
-                onChange={(e) => setUrl(e.target.value)}
+                value={String(url ?? "")}
+                onChange={(e) => setUrl(e.target.value ?? "")}
+                placeholder="https://github.com/usuario/repo"
+                className="mt-1 w-full max-w-md rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="mt-3 rounded bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:opacity-90 disabled:opacity-50"
+            >
+              {submitting ? "Enviando…" : "Enviar entrega"}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmitFile} className="mt-4">
+            <label className="block">
+              <span className="text-sm font-medium text-foreground">
+                Archivo comprimido (.zip, .tar.gz)
+              </span>
+              <input
+                type="file"
+                accept=".zip,.tar.gz,.tgz,.tar"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="mt-1 block w-full max-w-md text-sm text-foreground file:mr-4 file:rounded file:border file:border-accent file:bg-accent/10 file:px-4 file:py-2 file:text-sm file:font-medium file:text-accent"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={submitting || !file}
+              className="mt-3 rounded bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:opacity-90 disabled:opacity-50"
+            >
+              {submitting ? "Subiendo…" : "Subir entrega"}
+            </button>
+          </form>
+        )}
+      </section>
+    );
+  }
+
+  if (submission?.status === "REJECTED") {
+    const canRetryAt = submission.canRetryAt
+      ? new Date(submission.canRetryAt)
+      : null;
+    const stillInCooldown =
+      canRetryAt && Date.now() < canRetryAt.getTime();
+
+    if (stillInCooldown && canRetryAt) {
+      const formattedDate = canRetryAt.toLocaleString("es-ES", {
+        dateStyle: "long",
+        timeStyle: "short",
+      });
+      return (
+        <section className="rounded-lg border border-border bg-surface p-6">
+          <h3 className="mb-2 text-lg font-semibold text-foreground">
+            Entrega no aprobada
+          </h3>
+          <p className="text-sm text-foreground">
+            Tu entrega fue rechazada. Debes esperar un tiempo antes de volver a
+            enviar. Podrás volver a enviar a partir del{" "}
+            <strong>{formattedDate}</strong>.
+          </p>
+        </section>
+      );
+    }
+
+    return (
+      <section className="rounded-lg border border-border bg-surface p-6">
+        <h3 className="mb-2 text-lg font-semibold text-foreground">
+          Entregar proyecto
+        </h3>
+        <p className="mb-4 text-sm text-muted">
+          Tu entrega fue rechazada. Ya puedes volver a enviar cuando quieras.
+        </p>
+        <div className="flex gap-2 border-b border-border">
+          <button
+            type="button"
+            onClick={() => setMode("url")}
+            className={`px-3 py-2 text-sm font-medium transition-colors ${
+              mode === "url"
+                ? "border-b-2 border-accent text-accent"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            Enviar enlace (URL)
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("file")}
+            className={`px-3 py-2 text-sm font-medium transition-colors ${
+              mode === "file"
+                ? "border-b-2 border-accent text-accent"
+                : "text-muted hover:text-foreground"
+            }`}
+          >
+            Subir archivo
+          </button>
+        </div>
+        {mode === "url" ? (
+          <form onSubmit={handleSubmitUrl} className="mt-4">
+            <label className="block">
+              <span className="text-sm font-medium text-foreground">
+                URL del repositorio (ej. GitHub)
+              </span>
+              <input
+                type="url"
+                value={String(url ?? "")}
+                onChange={(e) => setUrl(e.target.value ?? "")}
                 placeholder="https://github.com/usuario/repo"
                 className="mt-1 w-full max-w-md rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
               />
@@ -286,8 +394,8 @@ export function ProjectSubmissionForm({ lessonId }: Props) {
             </span>
             <input
               type="url"
-              value={url ?? ""}
-              onChange={(e) => setUrl(e.target.value)}
+              value={String(url ?? "")}
+              onChange={(e) => setUrl(e.target.value ?? "")}
               placeholder="https://github.com/usuario/repo"
               className="mt-1 w-full max-w-md rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
             />

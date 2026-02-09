@@ -103,6 +103,7 @@ model Lesson {
 
 enum ProjectSubmissionStatus {
   PENDING
+  REJECTED
   APPROVED
 }
 
@@ -121,6 +122,7 @@ model ProjectSubmission {
   filePath       String?                 @db.VarChar(500)
   submittedAt    DateTime                @default(now())
   approvedAt     DateTime?
+  rejectedAt     DateTime?
   user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   lesson         Lesson                  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 

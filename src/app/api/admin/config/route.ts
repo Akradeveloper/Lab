@@ -16,6 +16,7 @@ import {
   DEFAULT_EXERCISE_COUNT,
   DEFAULT_RATE_LIMIT_WINDOW_MINUTES,
   DEFAULT_RATE_LIMIT_MAX_REQUESTS,
+  DEFAULT_PROJECT_SUBMISSION_COOLDOWN_HOURS,
   DEFAULT_ACHIEVEMENT_MILESTONES,
 } from "@/lib/app-config";
 
@@ -110,6 +111,11 @@ const NUMERIC_RANGES: Record<
     min: 1,
     max: 20,
     default: DEFAULT_RATE_LIMIT_MAX_REQUESTS,
+  },
+  project_submission_cooldown_hours: {
+    min: 1,
+    max: 168,
+    default: DEFAULT_PROJECT_SUBMISSION_COOLDOWN_HOURS,
   },
 };
 

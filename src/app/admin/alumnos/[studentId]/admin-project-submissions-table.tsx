@@ -14,17 +14,24 @@ export type SubmissionRow = {
   approvedAt: string | null;
 };
 
+function formatDateTime(d: Date): string {
+  return d.toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 type Props = {
   submissions: SubmissionRow[];
-  formatDateTime: (d: Date) => string;
 };
 
-export function AdminProjectSubmissionsTable({
-  submissions,
-  formatDateTime,
-}: Props) {
+export function AdminProjectSubmissionsTable({ submissions }: Props) {
   const router = useRouter();
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
 
   async function handleApprove(submissionId: string) {
     setApprovingId(submissionId);
@@ -41,6 +48,24 @@ export function AdminProjectSubmissionsTable({
       router.refresh();
     } finally {
       setApprovingId(null);
+    }
+  }
+
+  async function handleReject(submissionId: string) {
+    setRejectingId(submissionId);
+    try {
+      const res = await fetch(
+        `/api/admin/project-submissions/${submissionId}/reject`,
+        { method: "POST", credentials: "include" }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data?.error ?? "Error al rechazar");
+        return;
+      }
+      router.refresh();
+    } finally {
+      setRejectingId(null);
     }
   }
 
@@ -104,6 +129,10 @@ export function AdminProjectSubmissionsTable({
                   <span className="rounded bg-amber-500/20 px-2 py-0.5 text-amber-700 dark:text-amber-400">
                     Pendiente
                   </span>
+                ) : s.status === "REJECTED" ? (
+                  <span className="rounded bg-muted/50 px-2 py-0.5 text-muted">
+                    Rechazado
+                  </span>
                 ) : s.approvedAt ? (
                   <span className="text-muted">
                     Aprobado ({formatDateTime(new Date(s.approvedAt))})
@@ -114,14 +143,24 @@ export function AdminProjectSubmissionsTable({
               </td>
               <td className="px-4 py-3">
                 {s.status === "PENDING" && (
-                  <button
-                    type="button"
-                    onClick={() => handleApprove(s.id)}
-                    disabled={approvingId === s.id}
-                    className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground transition-colors hover:opacity-90 disabled:opacity-50"
-                  >
-                    {approvingId === s.id ? "Aprobando…" : "Aprobar"}
-                  </button>
+                  <span className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleApprove(s.id)}
+                      disabled={approvingId === s.id || rejectingId === s.id}
+                      className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-accent-foreground transition-colors hover:opacity-90 disabled:opacity-50"
+                    >
+                      {approvingId === s.id ? "Aprobando…" : "Aprobar"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleReject(s.id)}
+                      disabled={approvingId === s.id || rejectingId === s.id}
+                      className="rounded border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                    >
+                      {rejectingId === s.id ? "Rechazando…" : "Rechazar"}
+                    </button>
+                  </span>
                 )}
               </td>
             </tr>

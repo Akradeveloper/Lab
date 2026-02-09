@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { authOptions } from "@/lib/auth";
+import { getAppConfigNumber } from "@/lib/app-config";
 import { prisma } from "@/lib/prisma";
 import type { ProjectSubmissionType } from "@prisma/client";
 
@@ -136,6 +137,27 @@ export async function POST(request: Request, { params }: Params) {
           { status: 400 }
         );
       }
+      if (existing.status === "REJECTED" && existing.rejectedAt) {
+        const cooldownHours = await getAppConfigNumber(
+          "project_submission_cooldown_hours",
+          72
+        );
+        const cooldownMs = cooldownHours * 60 * 60 * 1000;
+        const elapsed = Date.now() - existing.rejectedAt.getTime();
+        if (elapsed < cooldownMs) {
+          const retryAfter = new Date(
+            existing.rejectedAt.getTime() + cooldownMs
+          );
+          return NextResponse.json(
+            {
+              error:
+                "Debes esperar al menos 72 horas tras un rechazo para volver a enviar.",
+              retryAfter: retryAfter.toISOString(),
+            },
+            { status: 400 }
+          );
+        }
+      }
       if (existing.submissionType === "FILE" && existing.filePath) {
         const oldFull = path.join(process.cwd(), existing.filePath);
         if (fs.existsSync(oldFull)) fs.unlinkSync(oldFull);
@@ -148,6 +170,7 @@ export async function POST(request: Request, { params }: Params) {
           url: submissionType === "URL" ? url : null,
           filePath: submissionType === "FILE" ? filePath : null,
           submittedAt: new Date(),
+          rejectedAt: null,
         },
       });
       return NextResponse.json({

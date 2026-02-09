@@ -420,7 +420,6 @@ export default async function AdminStudentProgressPage({ params }: Props) {
         </p>
         <AdminProjectSubmissionsTable
           submissions={projectSubmissionsList}
-          formatDateTime={formatDateTime}
         />
       </section>
 

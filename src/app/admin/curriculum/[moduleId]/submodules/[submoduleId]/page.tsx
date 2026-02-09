@@ -3,7 +3,6 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { DescriptionMarkdown } from "@/components/description-markdown";
-import { Header } from "@/components/Header";
 import { prisma } from "@/lib/prisma";
 import { AdminLessonsList } from "../../admin-lessons-list";
 
@@ -33,41 +32,38 @@ export default async function AdminSubmodulePage({ params }: Props) {
   if (!submodule || submodule.moduleId !== moduleId) notFound();
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main id="main-content" className="mx-auto max-w-4xl px-4 py-8">
-        <nav className="mb-6 text-sm text-muted">
-          <Link
-            href="/admin/curriculum"
-            className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
-          >
-            ← Currículo
-          </Link>
-          <span className="mx-2">/</span>
-          <Link
-            href={`/admin/curriculum/${moduleId}`}
-            className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
-          >
-            {submodule.module.title}
-          </Link>
-        </nav>
-        <h1 className="mb-2 text-2xl font-semibold text-foreground">
-          {submodule.title}
-        </h1>
-        {submodule.description && (
-          <DescriptionMarkdown
-            content={submodule.description}
-            className="mb-4"
-          />
-        )}
-        <p className="mb-6 text-muted">Lecciones del submódulo</p>
-        <AdminLessonsList
-          moduleId={moduleId}
-          submoduleId={submoduleId}
-          moduleTitle={submodule.module.title}
-          submoduleTitle={submodule.title}
+    <>
+      <nav className="mb-6 text-sm text-muted">
+        <Link
+          href="/admin/curriculum"
+          className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
+        >
+          ← Currículo
+        </Link>
+        <span className="mx-2">/</span>
+        <Link
+          href={`/admin/curriculum/${moduleId}`}
+          className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
+        >
+          {submodule.module.title}
+        </Link>
+      </nav>
+      <h1 className="mb-2 text-2xl font-semibold text-foreground">
+        {submodule.title}
+      </h1>
+      {submodule.description && (
+        <DescriptionMarkdown
+          content={submodule.description}
+          className="mb-4"
         />
-      </main>
-    </div>
+      )}
+      <p className="mb-6 text-muted">Lecciones del submódulo</p>
+      <AdminLessonsList
+        moduleId={moduleId}
+        submoduleId={submoduleId}
+        moduleTitle={submodule.module.title}
+        submoduleTitle={submodule.title}
+      />
+    </>
   );
 }

@@ -67,7 +67,7 @@ const MODEL_LIMIT_RANGES: Record<string, LimitRanges> = {
 
 const DEFAULT_LIMIT_RANGES: LimitRanges = MODEL_LIMIT_RANGES["gpt-4o-mini"];
 
-type TabId = "ia" | "testimonios" | "limites" | "rate-limit" | "logros";
+type TabId = "ia" | "testimonios" | "limites" | "rate-limit" | "proyectos" | "logros";
 
 type Props = {
   config: ConfigState;
@@ -534,6 +534,63 @@ export function ConfigForm({ config, setConfig, activeTab }: Props) {
             handleSaveSection({
               rate_limit_window_minutes: config.rate_limit_window_minutes,
               rate_limit_max_requests: config.rate_limit_max_requests,
+            })
+          }
+          disabled={saving}
+          className="px-4 py-2 text-sm font-medium rounded bg-accent text-accent-foreground hover:opacity-90 focus:ring-2 focus:ring-accent disabled:opacity-50"
+        >
+          {saving ? "Guardando…" : "Guardar"}
+        </button>
+        {message && (
+          <p
+            className={`text-sm ${message.type === "success" ? "text-green-600" : "text-destructive"}`}
+          >
+            {message.text}
+          </p>
+        )}
+      </section>
+    );
+  }
+
+  if (activeTab === "proyectos") {
+    return (
+      <section className="space-y-4" aria-labelledby="tab-proyectos">
+        <h2 id="tab-proyectos" className="sr-only">
+          Entregas de proyectos
+        </h2>
+        <div>
+          <label
+            htmlFor="project_submission_cooldown_hours"
+            className="block text-sm font-medium text-foreground mb-1"
+          >
+            Tiempo de espera para reenviar tras rechazo (horas)
+          </label>
+          <input
+            id="project_submission_cooldown_hours"
+            type="number"
+            min={1}
+            max={168}
+            value={config.project_submission_cooldown_hours}
+            onChange={(e) =>
+              setConfig((prev) => ({
+                ...prev,
+                project_submission_cooldown_hours: Number(e.target.value) || 72,
+              }))
+            }
+            className="w-full max-w-xs px-3 py-2 border border-border rounded bg-background text-foreground"
+          />
+        </div>
+        <p className="text-sm text-muted">
+          Tras rechazar una entrega de proyecto, el alumno no podrá volver a
+          enviar hasta que hayan pasado esta cantidad de horas (máx. 168 = 1
+          semana).
+        </p>
+        <button
+          type="button"
+          onClick={() =>
+            handleSaveSection({
+              project_submission_cooldown_hours:
+                config.project_submission_cooldown_hours,
             })
           }
           disabled={saving}

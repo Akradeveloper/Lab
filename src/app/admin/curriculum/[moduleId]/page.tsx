@@ -2,7 +2,6 @@ import { getServerSession } from "next-auth";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
-import { Header } from "@/components/Header";
 import { prisma } from "@/lib/prisma";
 import { AdminModuleTabs } from "./admin-module-tabs";
 
@@ -38,27 +37,24 @@ export default async function AdminModulePage({ params }: Props) {
   }));
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main id="main-content" className="mx-auto max-w-4xl px-4 py-8">
-        <nav className="mb-6 text-sm text-muted">
-          <Link
-            href="/admin/curriculum"
-            className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
-          >
-            ← Currículo
-          </Link>
-        </nav>
-        <h1 className="mb-6 text-2xl font-semibold text-foreground">
-          {module_.title}
-        </h1>
-        <AdminModuleTabs
-          moduleId={moduleId}
-          moduleTitle={module_.title}
-          hasSubmodules={hasSubmodules}
-          submodules={submodulesForLinks}
-        />
-      </main>
-    </div>
+    <>
+      <nav className="mb-6 text-sm text-muted">
+        <Link
+          href="/admin/curriculum"
+          className="transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
+        >
+          ← Currículo
+        </Link>
+      </nav>
+      <h1 className="mb-6 text-2xl font-semibold text-foreground">
+        {module_.title}
+      </h1>
+      <AdminModuleTabs
+        moduleId={moduleId}
+        moduleTitle={module_.title}
+        hasSubmodules={hasSubmodules}
+        submodules={submodulesForLinks}
+      />
+    </>
   );
 }
