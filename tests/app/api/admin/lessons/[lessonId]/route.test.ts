@@ -241,6 +241,31 @@ describe("PUT /api/admin/lessons/[lessonId]", () => {
     const data = await res.json();
     expect(data.error).toBe("Tipo de lección no válido; usa standard o project");
   });
+
+  it("devuelve 200 actualizando solo lessonType (L25 rama data con lessonType)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.lesson.update).mockResolvedValue({
+      id: "l1",
+      title: "Lección",
+      content: "",
+      order: 0,
+      lessonType: "project",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as never);
+    const req = new Request("https://example.com", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lessonType: "project" }),
+    });
+    const res = await PUT(req, { params: Promise.resolve({ lessonId: "l1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.lesson.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ lessonType: "project" }),
+      })
+    );
+  });
 });
 
 describe("DELETE /api/admin/lessons/[lessonId]", () => {
@@ -275,5 +300,39 @@ describe("DELETE /api/admin/lessons/[lessonId]", () => {
     expect(res.status).toBe(404);
     const data = await res.json();
     expect(data.error).toBe("Lección no encontrada");
+  });
+
+  it("L69: devuelve 500 cuando delete rechaza con error distinto de P2025 (handlePrismaError)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.lesson.delete).mockRejectedValueOnce(new Error("DB constraint"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "development");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await DELETE(new Request("https://example.com"), {
+        params: Promise.resolve({ lessonId: "l1" }),
+      });
+      expect(res.status).toBe(500);
+      expect(consoleSpy).toHaveBeenCalledWith("Error al eliminar lección:", expect.any(Error));
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("DELETE catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.lesson.delete).mockRejectedValueOnce(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await DELETE(new Request("https://example.com"), {
+        params: Promise.resolve({ lessonId: "l1" }),
+      });
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
   });
 });

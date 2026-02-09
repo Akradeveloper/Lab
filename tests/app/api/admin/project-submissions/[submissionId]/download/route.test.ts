@@ -128,4 +128,52 @@ describe("GET /api/admin/project-submissions/[submissionId]/download", () => {
     const data = await res.json();
     expect(data.error).toContain("Error al descargar");
   });
+
+  it("L41: ejecuta console.error en catch cuando readFileSync falla y NODE_ENV no production", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.projectSubmission.findUnique).mockResolvedValue({
+      id: "s1",
+      submissionType: "FILE",
+      filePath: "uploads/submission.zip",
+    } as never);
+    vi.mocked(fs.readFileSync).mockImplementation(() => {
+      throw new Error("ENOENT");
+    });
+    const restoreEnv = vi.stubEnv("NODE_ENV", "development");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await GET(new Request("https://x.com"), {
+        params: Promise.resolve({ submissionId: "s1" }),
+      });
+      expect(res.status).toBe(500);
+      expect(consoleSpy).toHaveBeenCalledWith("Error al descargar archivo:", expect.any(Error));
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.projectSubmission.findUnique).mockResolvedValue({
+      id: "s1",
+      submissionType: "FILE",
+      filePath: "uploads/submission.zip",
+    } as never);
+    vi.mocked(fs.readFileSync).mockImplementation(() => {
+      throw new Error("ENOENT");
+    });
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await GET(new Request("https://x.com"), {
+        params: Promise.resolve({ submissionId: "s1" }),
+      });
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
 });

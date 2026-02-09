@@ -276,6 +276,40 @@ describe("POST /api/admin/lessons/[lessonId]/exercises", () => {
     );
   });
 
+  it("CODE con options.template no string usa default vacío (L55 L58)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.exercise.create).mockResolvedValue({
+      id: "ex1",
+      lessonId: "l1",
+      type: "CODE",
+      question: "Q",
+      options: '{"language":"javascript","template":"","testCases":[]}',
+      correctAnswer: "",
+      order: 0,
+      createdAt: new Date(),
+    } as never);
+    const res = await POST(
+      new Request("https://example.com", {
+        method: "POST",
+        body: JSON.stringify({
+          type: "CODE",
+          question: "Q",
+          options: { template: 123 },
+          correctAnswer: "",
+        }),
+      }),
+      { params: Promise.resolve({ lessonId: "l1" }) }
+    );
+    expect(res.status).toBe(200);
+    expect(prisma.exercise.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          options: expect.stringContaining('"template":""'),
+        }),
+      })
+    );
+  });
+
   it("devuelve 200 y crea ejercicio DESARROLLO", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
     vi.mocked(prisma.exercise.create).mockResolvedValue({
@@ -331,5 +365,47 @@ describe("POST /api/admin/lessons/[lessonId]/exercises", () => {
     expect(res.status).toBe(500);
     const data = await res.json();
     expect(data.error).toContain("Error al crear el ejercicio");
+  });
+
+  it("L102: ejecuta console.error en catch cuando create falla y NODE_ENV no production", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.exercise.create).mockRejectedValueOnce(new Error("DB fail"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "development");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(
+        new Request("https://example.com", {
+          method: "POST",
+          body: JSON.stringify({ type: "MULTIPLE_CHOICE", question: "Q" }),
+        }),
+        { params: Promise.resolve({ lessonId: "l1" }) }
+      );
+      expect(res.status).toBe(500);
+      expect(consoleSpy).toHaveBeenCalledWith("Error al crear ejercicio:", expect.any(Error));
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("POST catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.exercise.create).mockRejectedValueOnce(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(
+        new Request("https://example.com", {
+          method: "POST",
+          body: JSON.stringify({ type: "MULTIPLE_CHOICE", question: "Q" }),
+        }),
+        { params: Promise.resolve({ lessonId: "l1" }) }
+      );
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
   });
 });

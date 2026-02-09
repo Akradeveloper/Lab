@@ -175,6 +175,33 @@ describe("POST /api/admin/modules/[moduleId]/suggest-lessons-order", () => {
     expect(data.error).toContain("Error al obtener el orden sugerido");
   });
 
+  it("catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.findUnique).mockResolvedValue({
+      id: "m1",
+      title: "M1",
+      description: null,
+      _count: { submodules: 0 },
+    } as never);
+    vi.mocked(prisma.lesson.findMany).mockResolvedValue([
+      { id: "l1", title: "L1", content: "c1", difficulty: null },
+      { id: "l2", title: "L2", content: "c2", difficulty: null },
+    ] as never);
+    suggestOrderCreateMock.mockRejectedValueOnce(new Error("API error"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await POST(new Request("https://x.com"), {
+        params: Promise.resolve({ moduleId: "m1" }),
+      });
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
   it("devuelve 500 cuando la respuesta de la IA no es JSON válido (L117 catch)", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
     vi.mocked(prisma.module.findUnique).mockResolvedValue({

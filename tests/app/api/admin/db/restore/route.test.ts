@@ -110,6 +110,19 @@ describe("POST /api/admin/db/restore", () => {
     expect(data.error).toContain("JSON válido");
   });
 
+  it("L42 rama name.endsWith(.json): acepta archivo .json con contenido válido", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(isMySQL).mockReturnValue(true);
+    vi.mocked(restoreFromJson).mockResolvedValue(undefined);
+    const json = JSON.stringify({ schemaVersion: 1, data: { User: [] } });
+    const form = new FormData();
+    form.append("file", new File([json], "backup.json", { type: "application/json" }));
+    const req = new Request("https://x.com", { method: "POST", body: form });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(restoreFromJson).toHaveBeenCalled();
+  });
+
   it("acepta archivo con contenido JSON y nombre sin .json (MySQL, cubre L42 isJson)", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
     vi.mocked(isMySQL).mockReturnValue(true);

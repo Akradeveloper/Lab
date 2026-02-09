@@ -195,6 +195,7 @@ describe("POST /api/admin/modules", () => {
 
   it("ejecuta console.error del catch cuando OpenAI falla (L78-79)", async () => {
     vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    const restoreNodeEnv = vi.stubEnv("NODE_ENV", "development");
     vi.resetModules();
     const { POST: POSTHandler } = await import("@/app/api/admin/modules/route");
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
@@ -208,29 +209,90 @@ describe("POST /api/admin/modules", () => {
       updatedAt: new Date(),
     } as never);
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const req = new Request("https://x.com", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "Módulo" }),
-    });
-    await POSTHandler(req);
-    vi.unstubAllEnvs();
-    expect(consoleSpy).toHaveBeenCalledWith("Error al generar descripción del módulo con IA:", expect.any(Error));
-    consoleSpy.mockRestore();
+    try {
+      const req = new Request("https://x.com", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Módulo" }),
+      });
+      await POSTHandler(req);
+      expect(consoleSpy).toHaveBeenCalledWith("Error al generar descripción del módulo con IA:", expect.any(Error));
+    } finally {
+      vi.unstubAllEnvs();
+      typeof restoreNodeEnv === "function" ? restoreNodeEnv() : (restoreNodeEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("catch OpenAI con NODE_ENV production no llama a console.error", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    const restoreNodeEnv = vi.stubEnv("NODE_ENV", "production");
+    vi.resetModules();
+    const { POST: POSTHandler } = await import("@/app/api/admin/modules/route");
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    modulesOpenaiCreateMock.mockRejectedValueOnce(new Error("OpenAI rate limit"));
+    vi.mocked(prisma.module.create).mockResolvedValue({
+      id: "m1",
+      title: "Módulo",
+      description: null,
+      order: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as never);
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const req = new Request("https://x.com", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Módulo" }),
+      });
+      const res = await POSTHandler(req);
+      expect(res.status).toBe(200);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+      typeof restoreNodeEnv === "function" ? restoreNodeEnv() : (restoreNodeEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
   });
 
   it("ejecuta console.error del catch externo cuando create falla (L94-95)", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
-    vi.mocked(prisma.module.create).mockRejectedValue(new Error("DB error"));
+    vi.mocked(prisma.module.create).mockRejectedValueOnce(new Error("DB error"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "development");
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const req = new Request("https://x.com", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "Nuevo" }),
-    });
-    const res = await POST(req);
-    expect(res.status).toBe(500);
-    expect(consoleSpy).toHaveBeenCalledWith("Error al crear módulo:", expect.any(Error));
-    consoleSpy.mockRestore();
+    try {
+      const req = new Request("https://x.com", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Nuevo" }),
+      });
+      const res = await POST(req);
+      expect(res.status).toBe(500);
+      expect(consoleSpy).toHaveBeenCalledWith("Error al crear módulo:", expect.any(Error));
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("catch externo con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(prisma.module.create).mockRejectedValueOnce(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const req = new Request("https://x.com", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Nuevo" }),
+      });
+      const res = await POST(req);
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
   });
 });

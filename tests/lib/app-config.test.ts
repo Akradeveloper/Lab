@@ -166,5 +166,9 @@ describe("app-config", () => {
       const result = await getConfigValue("clave_inexistente");
       expect(result).toBe("");
     });
+
+    // L136-137: rama return raw ?? fallback. Con las claves actuales de FALLBACK_MAP
+    // todas están en numKeys o son openai_model/achievement_milestones, por lo que
+    // esta rama no se ejecuta; se deja documentado por si se añade una clave no numérica.
   });
 });

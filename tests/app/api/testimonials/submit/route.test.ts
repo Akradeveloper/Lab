@@ -117,4 +117,48 @@ describe("POST /api/testimonials/submit", () => {
       })
     );
   });
+
+  it("L86-89: ejecuta console.error en catch cuando create falla y NODE_ENV no production", async () => {
+    vi.mocked(prisma.testimonial.create).mockRejectedValueOnce(new Error("DB error"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "development");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const req = new Request("https://example.com", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: "Excelente curso, muy recomendable.".repeat(5),
+        }),
+      });
+      const res = await POST(req);
+      expect(res.status).toBe(500);
+      const data = await res.json();
+      expect(data.error).toContain("Error al guardar el testimonio");
+      expect(consoleSpy).toHaveBeenCalledWith("Error creando testimonio:", expect.any(Error));
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(prisma.testimonial.create).mockRejectedValueOnce(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const req = new Request("https://example.com", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: "Excelente curso, muy recomendable.".repeat(5),
+        }),
+      });
+      const res = await POST(req);
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
 });

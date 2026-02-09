@@ -115,18 +115,23 @@ describe("POST /api/admin/db/wipe", () => {
   it("devuelve 500 si $transaction lanza (con NODE_ENV=production no registra en consola)", async () => {
     vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
     vi.mocked(prisma.$transaction).mockRejectedValue(new Error("DB error"));
-    const orig = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
-    const req = new Request("https://x.com", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password: "secret" }),
-    });
-    const res = await POST(req);
-    process.env.NODE_ENV = orig;
-    expect(res.status).toBe(500);
-    const data = await res.json();
-    expect(data.error).toContain("vaciar");
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const req = new Request("https://x.com", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: "secret" }),
+      });
+      const res = await POST(req);
+      expect(res.status).toBe(500);
+      const data = await res.json();
+      expect(data.error).toContain("vaciar");
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
   });
 
   it("devuelve 200 y vacía la BD con contraseña correcta", async () => {

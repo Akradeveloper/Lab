@@ -77,4 +77,46 @@ describe("GET /api/testimonials/can-submit", () => {
     const data = await res.json();
     expect(data.canSubmit).toBe(true);
   });
+
+  it("L52-55: ejecuta console.error en catch cuando findFirst o count fallan y NODE_ENV no production", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "u1", email: "a@b.com", name: "U" },
+      expires: "",
+    } as never);
+    vi.mocked(prisma.progress.count).mockRejectedValueOnce(new Error("DB error"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "development");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await GET();
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.canSubmit).toBe(false);
+      expect(data.reason).toBe("error");
+      expect(consoleSpy).toHaveBeenCalledWith("Error comprobando can-submit:", expect.any(Error));
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(getServerSession).mockResolvedValue({
+      user: { id: "u1", email: "a@b.com", name: "U" },
+      expires: "",
+    } as never);
+    vi.mocked(prisma.progress.count).mockRejectedValueOnce(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await GET();
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.canSubmit).toBe(false);
+      expect(data.reason).toBe("error");
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
 });

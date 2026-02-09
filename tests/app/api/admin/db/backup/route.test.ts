@@ -96,4 +96,17 @@ describe("GET /api/admin/db/backup", () => {
     const data = await res.json();
     expect(data.error).toBe("DB connection lost");
   });
+
+  it("devuelve 500 con mensaje genérico cuando el catch recibe valor no Error (L42)", async () => {
+    vi.mocked(getAdminSession).mockResolvedValue(adminSession as never);
+    vi.mocked(isMySQL).mockReturnValue(false);
+    vi.mocked(getDbFilePathOrThrow).mockReturnValue("/tmp/db.db");
+    vi.mocked(fs.readFileSync).mockImplementation(() => {
+      throw "string error";
+    });
+    const res = await GET();
+    expect(res.status).toBe(500);
+    const data = await res.json();
+    expect(data.error).toBe("Error al leer la BD");
+  });
 });

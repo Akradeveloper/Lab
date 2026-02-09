@@ -40,6 +40,16 @@ describe("rate-limit", () => {
     );
   });
 
+  it("L19-20: usa IP unknown cuando no hay x-forwarded-for ni x-real-ip", async () => {
+    const req = new Request("https://example.com", { headers: {} });
+    await checkRegisterRateLimit(req);
+    await checkRegisterRateLimit(req);
+    const third = await checkRegisterRateLimit(req);
+    expect(third).toBe(
+      "Demasiados intentos de registro. Espera unos minutos e inténtalo de nuevo."
+    );
+  });
+
   it("usa x-forwarded-for como IP cuando está presente", async () => {
     const reqA = new Request("https://example.com", {
       headers: { "x-forwarded-for": "192.168.1.1" },

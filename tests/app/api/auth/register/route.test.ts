@@ -76,12 +76,44 @@ describe("POST /api/auth/register", () => {
     expect(data.error).toBe("El formato del email no es válido");
   });
 
-  it("devuelve 400 si el email no tiene punto en el dominio (L14 dotIndex)", async () => {
+  it("devuelve 400 cuando email se trima a vacío (L8 isValidEmailFormat length 0)", async () => {
+    const req = new Request("https://example.com", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "   ",
+        password: "Pass1234",
+        name: "Test",
+      }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("El formato del email no es válido");
+  });
+
+  it("devuelve 400 si el email no tiene punto en el dominio (L14 L15 dotIndex)", async () => {
     const req = new Request("https://example.com", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email: "user@dominiosinpunto",
+        password: "Pass1234",
+        name: "Test",
+      }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("El formato del email no es válido");
+  });
+
+  it("devuelve 400 cuando dominio es un solo carácter sin punto (L15)", async () => {
+    const req = new Request("https://example.com", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "user@b",
         password: "Pass1234",
         name: "Test",
       }),
@@ -378,6 +410,29 @@ describe("POST /api/auth/register", () => {
     expect(res.status).toBe(500);
     const data = await res.json();
     expect(data.error).toBe("Error al registrar");
+  });
+
+  it("catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(prisma.user.create).mockRejectedValue(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const req = new Request("https://example.com", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "nuevo@example.com",
+          password: "Pass1234",
+          name: "Usuario Nuevo",
+        }),
+      });
+      const res = await POST(req);
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
   });
 
   it("devuelve 500 cuando el body no es JSON válido", async () => {

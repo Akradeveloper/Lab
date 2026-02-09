@@ -64,12 +64,33 @@ describe("GET /api/certificates/[id]", () => {
 
   it("ejecuta console.error del catch cuando findUnique lanza (L43)", async () => {
     vi.mocked(prisma.certificate.findUnique).mockRejectedValue(new Error("DB error"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "development");
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const res = await GET(new Request("https://x.com"), {
-      params: Promise.resolve({ id: "c1" }),
-    });
-    expect(res.status).toBe(500);
-    expect(consoleSpy).toHaveBeenCalledWith("Error al obtener certificado:", expect.any(Error));
-    consoleSpy.mockRestore();
+    try {
+      const res = await GET(new Request("https://x.com"), {
+        params: Promise.resolve({ id: "c1" }),
+      });
+      expect(res.status).toBe(500);
+      expect(consoleSpy).toHaveBeenCalledWith("Error al obtener certificado:", expect.any(Error));
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
+  });
+
+  it("catch con NODE_ENV production no llama a console.error", async () => {
+    vi.mocked(prisma.certificate.findUnique).mockRejectedValueOnce(new Error("DB"));
+    const restoreEnv = vi.stubEnv("NODE_ENV", "production");
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const res = await GET(new Request("https://x.com"), {
+        params: Promise.resolve({ id: "c1" }),
+      });
+      expect(res.status).toBe(500);
+      expect(consoleSpy).not.toHaveBeenCalled();
+    } finally {
+      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      consoleSpy.mockRestore();
+    }
   });
 });

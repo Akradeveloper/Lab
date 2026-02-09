@@ -256,6 +256,19 @@ describe("ai-prompts", () => {
       expect(r).toContain(exactContent);
       expect(r).not.toContain(exactContent + "...");
     });
+
+    it("L342: usa ctx.lessonContent sin slice cuando lessonContent está vacío o es muy corto", () => {
+      const r = buildSuggestExercisesPrompt(
+        {
+          lessonTitle: "T",
+          lessonContent: "",
+          previousLessons: [],
+        },
+        { maxSuggestContentLength: 5000 }
+      );
+      expect(r).toContain("Contenido de la lección:");
+      expect(r).not.toMatch(/\.\.\.$/m);
+    });
   });
 
   describe("buildProjectSystemPrompt", () => {
