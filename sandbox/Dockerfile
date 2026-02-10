@@ -1,0 +1,19 @@
+# Sandbox para ejecución de código: Python, JavaScript, Java, TypeScript
+FROM node:22-alpine
+
+RUN apk add --no-cache python3 openjdk17-jdk
+
+WORKDIR /app
+
+COPY sandbox/package.json ./
+RUN npm install --omit=dev
+
+COPY sandbox/server.mjs ./
+
+RUN addgroup -g 1001 -S sandbox && adduser -u 1001 -S sandbox -G sandbox
+RUN chown -R sandbox:sandbox /app
+USER sandbox
+
+EXPOSE 3001
+ENV PORT=3001
+CMD ["node", "server.mjs"]

@@ -30,6 +30,7 @@
     "bcryptjs": "^3.0.3",
     "canvas-confetti": "^1.9.4",
     "highlight.js": "^11.11.1",
+    "ioredis": "^5.9.2",
     "isomorphic-dompurify": "^3.0.0-rc.2",
     "next": "16.1.6",
     "next-auth": "^4.24.13",

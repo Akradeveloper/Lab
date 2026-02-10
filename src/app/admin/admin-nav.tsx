@@ -10,6 +10,7 @@ const links = [
   { href: "/admin/testimonios", label: "Testimonios" },
   { href: "/admin/configuracion", label: "Configuración" },
   { href: "/admin/base-de-datos", label: "Base de datos" },
+  { href: "/admin/sandbox", label: "Sandbox" },
 ] as const;
 
 const baseClass =

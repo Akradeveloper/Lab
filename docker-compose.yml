@@ -18,17 +18,42 @@ services:
       retries: 12
       start_period: 30s
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  sandbox:
+    build:
+      context: .
+      dockerfile: sandbox/Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3001"
+
   app:
     image: qalab-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
+      sandbox:
+        condition: service_started
     environment:
       DATABASE_URL: ${DATABASE_URL}
       DB_SSL: "false"
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      SANDBOX_URL: ${SANDBOX_URL:-http://sandbox:3001}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
       TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY}

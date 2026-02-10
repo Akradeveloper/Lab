@@ -1,0 +1,10 @@
+{
+  "name": "qalab-sandbox",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sandbox para ejecución de código (Python, JavaScript, Java, TypeScript)",
+  "dependencies": {
+    "tsx": "^4.19.2"
+  }
+}
