@@ -42,7 +42,6 @@
     "rehype-highlight": "^7.0.2"
   },
   "devDependencies": {
-    "@rollup/rollup-win32-x64-msvc": "^4.0.18",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/canvas-confetti": "^1.9.0",
