@@ -219,7 +219,8 @@ describe("POST /api/admin/modules", () => {
       expect(consoleSpy).toHaveBeenCalledWith("Error al generar descripción del módulo con IA:", expect.any(Error));
     } finally {
       vi.unstubAllEnvs();
-      typeof restoreNodeEnv === "function" ? restoreNodeEnv() : (restoreNodeEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreNodeEnv === "function") restoreNodeEnv();
+      else (restoreNodeEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });
@@ -251,7 +252,8 @@ describe("POST /api/admin/modules", () => {
       expect(consoleSpy).not.toHaveBeenCalled();
     } finally {
       vi.unstubAllEnvs();
-      typeof restoreNodeEnv === "function" ? restoreNodeEnv() : (restoreNodeEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreNodeEnv === "function") restoreNodeEnv();
+      else (restoreNodeEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });
@@ -271,7 +273,8 @@ describe("POST /api/admin/modules", () => {
       expect(res.status).toBe(500);
       expect(consoleSpy).toHaveBeenCalledWith("Error al crear módulo:", expect.any(Error));
     } finally {
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });
@@ -291,7 +294,8 @@ describe("POST /api/admin/modules", () => {
       expect(res.status).toBe(500);
       expect(consoleSpy).not.toHaveBeenCalled();
     } finally {
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });

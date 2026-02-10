@@ -1,8 +1,8 @@
-"use strict";
+import path from "path";
+import { spawnSync } from "child_process";
+import dotenv from "dotenv";
 
-const path = require("path");
-const { spawnSync } = require("child_process");
-require("dotenv").config({ path: ".env" });
+dotenv.config({ path: ".env" });
 
 const projectPath = path.resolve(process.cwd());
 

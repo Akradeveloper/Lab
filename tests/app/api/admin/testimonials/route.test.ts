@@ -92,7 +92,8 @@ describe("GET /api/admin/testimonials", () => {
       expect(res.status).toBe(500);
       expect(consoleSpy).toHaveBeenCalledWith("Error listando testimonios admin:", expect.any(Error));
     } finally {
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });
@@ -110,7 +111,8 @@ describe("GET /api/admin/testimonials", () => {
       expect(res.status).toBe(500);
       expect(consoleSpy).not.toHaveBeenCalled();
     } finally {
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });

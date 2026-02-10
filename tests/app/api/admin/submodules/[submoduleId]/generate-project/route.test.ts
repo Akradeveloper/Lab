@@ -188,7 +188,8 @@ describe("POST /api/admin/submodules/[submoduleId]/generate-project", () => {
       expect(res.status).toBe(500);
       expect(consoleSpy).not.toHaveBeenCalled();
     } finally {
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });

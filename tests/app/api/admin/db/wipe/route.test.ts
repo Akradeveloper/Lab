@@ -129,7 +129,8 @@ describe("POST /api/admin/db/wipe", () => {
       expect(data.error).toContain("vaciar");
       expect(consoleSpy).not.toHaveBeenCalled();
     } finally {
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });

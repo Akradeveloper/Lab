@@ -94,7 +94,8 @@ describe("GET /api/testimonials/can-submit", () => {
       expect(data.reason).toBe("error");
       expect(consoleSpy).toHaveBeenCalledWith("Error comprobando can-submit:", expect.any(Error));
     } finally {
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });
@@ -115,7 +116,8 @@ describe("GET /api/testimonials/can-submit", () => {
       expect(data.reason).toBe("error");
       expect(consoleSpy).not.toHaveBeenCalled();
     } finally {
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });

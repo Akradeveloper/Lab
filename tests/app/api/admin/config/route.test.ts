@@ -90,7 +90,8 @@ describe("GET /api/admin/config", () => {
       expect(res.status).toBe(500);
       expect(consoleSpy).toHaveBeenCalledWith("Error leyendo config:", expect.any(Error));
     } finally {
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });
@@ -105,7 +106,8 @@ describe("GET /api/admin/config", () => {
       expect(res.status).toBe(500);
       expect(consoleSpy).not.toHaveBeenCalled();
     } finally {
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });
@@ -125,7 +127,8 @@ describe("GET /api/admin/config", () => {
       expect(consoleSpy).toHaveBeenCalledWith("Error leyendo config:", expect.any(Error));
     } finally {
       vi.resetModules();
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });
@@ -463,7 +466,8 @@ describe("PATCH /api/admin/config", () => {
       expect(res.status).toBe(500);
       expect(consoleSpy).toHaveBeenCalledWith("Error actualizando config:", expect.any(Error));
     } finally {
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });
@@ -483,7 +487,8 @@ describe("PATCH /api/admin/config", () => {
       expect(res.status).toBe(500);
       expect(consoleSpy).not.toHaveBeenCalled();
     } finally {
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });

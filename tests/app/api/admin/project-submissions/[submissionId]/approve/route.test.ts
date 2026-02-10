@@ -141,7 +141,8 @@ describe("POST /api/admin/project-submissions/[submissionId]/approve", () => {
       expect(data.ok).toBe(true);
       expect(consoleSpy).toHaveBeenCalledWith("Error al verificar/emitir certificado:", expect.any(Error));
     } finally {
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });
@@ -171,7 +172,8 @@ describe("POST /api/admin/project-submissions/[submissionId]/approve", () => {
       expect(res.status).toBe(200);
       expect(consoleSpy).not.toHaveBeenCalled();
     } finally {
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });
@@ -195,7 +197,8 @@ describe("POST /api/admin/project-submissions/[submissionId]/approve", () => {
       expect(res.status).toBe(500);
       expect(consoleSpy).not.toHaveBeenCalled();
     } finally {
-      typeof restoreEnv === "function" ? restoreEnv() : (restoreEnv as { restore?: () => void }).restore?.();
+      if (typeof restoreEnv === "function") restoreEnv();
+      else (restoreEnv as { restore?: () => void }).restore?.();
       consoleSpy.mockRestore();
     }
   });
