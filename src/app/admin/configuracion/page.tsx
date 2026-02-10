@@ -25,6 +25,7 @@ const TABS = [
   { id: "rate-limit", label: "Rate limit (registro)" },
   { id: "proyectos", label: "Entregas de proyectos" },
   { id: "logros", label: "Logros" },
+  { id: "sandbox", label: "Probar sandbox" },
 ] as const;
 
 export default function AdminConfiguracionPage() {

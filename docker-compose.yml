@@ -18,6 +18,15 @@ services:
       retries: 12
       start_period: 30s
 
+  sandbox:
+    build:
+      context: ./sandbox
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # Solo red interna; la app y el worker usan http://sandbox:3001/run
+    expose:
+      - "3001"
+
   app:
     image: qalab-app
     restart: unless-stopped
@@ -29,6 +38,7 @@ services:
       DB_SSL: "false"
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
+      SANDBOX_URL: http://sandbox:3001
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
       TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY}

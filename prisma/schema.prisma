@@ -27,8 +27,38 @@ model User {
   certificates         Certificate[]
   testimonials         Testimonial[]
   projectSubmissions   ProjectSubmission[]
+  codeExecutionJobs    CodeExecutionJob[]
 
   @@map("user")
+}
+
+enum CodeExecutionJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model CodeExecutionJob {
+  id          String                  @id @default(cuid())
+  userId      String
+  exerciseId  String
+  lessonId    String
+  code        String                  @db.LongText
+  language    String                  @db.VarChar(50)
+  status      CodeExecutionJobStatus  @default(PENDING)
+  stdout      String?                 @db.Text
+  stderr      String?                 @db.Text
+  exitCode    Int?
+  timedOut    Boolean?
+  error       String?                 @db.Text
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime                @default(now())
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@map("code_execution_job")
 }
 
 model Progress {

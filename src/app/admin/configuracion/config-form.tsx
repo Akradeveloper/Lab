@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { ConfigState } from "./page";
+import { CodeEditor } from "@/components/code-editor";
 
 const ALLOWED_MODELS = [
   "gpt-4o-mini",
@@ -67,12 +68,19 @@ const MODEL_LIMIT_RANGES: Record<string, LimitRanges> = {
 
 const DEFAULT_LIMIT_RANGES: LimitRanges = MODEL_LIMIT_RANGES["gpt-4o-mini"];
 
-type TabId = "ia" | "testimonios" | "limites" | "rate-limit" | "proyectos" | "logros";
+type TabId = "ia" | "testimonios" | "limites" | "rate-limit" | "proyectos" | "logros" | "sandbox";
 
 type Props = {
   config: ConfigState;
   setConfig: React.Dispatch<React.SetStateAction<ConfigState>>;
   activeTab: TabId;
+};
+
+const SANDBOX_DEFAULT_CODE: Record<string, string> = {
+  javascript: 'console.log("Hola");',
+  typescript: 'console.log("Hola");',
+  python: 'print("Hola")',
+  java: 'System.out.println("Hola");',
 };
 
 export function ConfigForm({ config, setConfig, activeTab }: Props) {
@@ -86,6 +94,18 @@ export function ConfigForm({ config, setConfig, activeTab }: Props) {
     ok: boolean;
     error?: string;
   } | null>(null);
+
+  const [sandboxLanguage, setSandboxLanguage] = useState<"javascript" | "typescript" | "python" | "java">("javascript");
+  const [sandboxCode, setSandboxCode] = useState(SANDBOX_DEFAULT_CODE.javascript);
+  const [sandboxStdin, setSandboxStdin] = useState("");
+  const [sandboxLoading, setSandboxLoading] = useState(false);
+  const [sandboxResult, setSandboxResult] = useState<{
+    stdout: string;
+    stderr: string;
+    exitCode: number;
+    timedOut: boolean;
+  } | null>(null);
+  const [sandboxError, setSandboxError] = useState<string | null>(null);
 
   const limitRanges = MODEL_LIMIT_RANGES[config.openai_model] ?? DEFAULT_LIMIT_RANGES;
 
@@ -659,6 +679,120 @@ export function ConfigForm({ config, setConfig, activeTab }: Props) {
           >
             {message.text}
           </p>
+        )}
+      </section>
+    );
+  }
+
+  if (activeTab === "sandbox") {
+    async function handleSandboxRun() {
+      setSandboxError(null);
+      setSandboxResult(null);
+      setSandboxLoading(true);
+      try {
+        const res = await fetch("/api/admin/sandbox/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            language: sandboxLanguage,
+            code: sandboxCode,
+            stdin: sandboxStdin || undefined,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setSandboxError(data?.error ?? `Error ${res.status}`);
+          return;
+        }
+        setSandboxResult({
+          stdout: typeof data.stdout === "string" ? data.stdout : "",
+          stderr: typeof data.stderr === "string" ? data.stderr : "",
+          exitCode: typeof data.exitCode === "number" ? data.exitCode : 0,
+          timedOut: Boolean(data.timedOut),
+        });
+      } catch (e) {
+        setSandboxError(e instanceof Error ? e.message : "Error al ejecutar");
+      } finally {
+        setSandboxLoading(false);
+      }
+    }
+
+    return (
+      <section className="space-y-4" aria-labelledby="tab-sandbox">
+        <h2 id="tab-sandbox" className="sr-only">
+          Probar sandbox
+        </h2>
+        <p className="text-sm text-muted">
+          Ejecuta código en el sandbox (JavaScript, TypeScript, Python o Java) sin pasar por la cola.
+        </p>
+        <div>
+          <label htmlFor="sandbox-language" className="block text-sm font-medium text-foreground mb-1">
+            Lenguaje
+          </label>
+          <select
+            id="sandbox-language"
+            value={sandboxLanguage}
+            onChange={(e) =>
+              setSandboxLanguage(e.target.value as "javascript" | "typescript" | "python" | "java")
+            }
+            className="w-full max-w-[200px] rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+          >
+            <option value="javascript">JavaScript</option>
+            <option value="typescript">TypeScript</option>
+            <option value="python">Python</option>
+            <option value="java">Java</option>
+          </select>
+        </div>
+        <div>
+          <span className="block text-sm font-medium text-foreground mb-1">Código</span>
+          <CodeEditor
+            language={sandboxLanguage}
+            value={sandboxCode}
+            onChange={setSandboxCode}
+            height="250px"
+          />
+        </div>
+        <div>
+          <label htmlFor="sandbox-stdin" className="block text-sm font-medium text-foreground mb-1">
+            Stdin (opcional)
+          </label>
+          <textarea
+            id="sandbox-stdin"
+            value={sandboxStdin}
+            onChange={(e) => setSandboxStdin(e.target.value)}
+            placeholder="Entrada estándar para el programa"
+            rows={2}
+            className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-sm text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleSandboxRun}
+          disabled={sandboxLoading}
+          className="rounded bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:opacity-90 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent"
+        >
+          {sandboxLoading ? "Ejecutando…" : "Ejecutar"}
+        </button>
+        {sandboxError && (
+          <p className="text-sm text-destructive">{sandboxError}</p>
+        )}
+        {sandboxResult && (
+          <div className="rounded border border-border bg-background p-3 font-mono text-xs space-y-2">
+            <p className="font-semibold text-muted">Salida (stdout):</p>
+            <pre className="whitespace-pre-wrap break-words text-foreground">
+              {sandboxResult.stdout || "(vacío)"}
+            </pre>
+            {sandboxResult.stderr ? (
+              <>
+                <p className="font-semibold text-destructive">stderr:</p>
+                <pre className="whitespace-pre-wrap break-words text-destructive">{sandboxResult.stderr}</pre>
+              </>
+            ) : null}
+            <p className="text-muted">
+              exitCode: {sandboxResult.exitCode}
+              {sandboxResult.timedOut ? " · Tiempo agotado" : ""}
+            </p>
+          </div>
         )}
       </section>
     );

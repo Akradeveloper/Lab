@@ -63,7 +63,13 @@ export async function POST(request: Request, { params }: Params) {
       correctStr =
         typeof correctAnswer === "string" ? correctAnswer : "";
     } else if (type === "DESARROLLO") {
-      optionsStr = "{}";
+      const devOpts = options != null && typeof options === "object" && !Array.isArray(options)
+        ? (options as { language?: string; template?: string })
+        : {};
+      optionsStr = JSON.stringify({
+        language: typeof devOpts.language === "string" ? devOpts.language : "javascript",
+        template: typeof devOpts.template === "string" ? devOpts.template : "",
+      });
       correctStr = "";
     } else {
       optionsStr =

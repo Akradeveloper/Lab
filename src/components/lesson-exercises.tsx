@@ -1,16 +1,37 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { CodeEditor } from "@/components/code-editor";
 import { useToast } from "@/components/toast";
 
+type ExecutionState =
+  | { phase: "idle" }
+  | { phase: "submitting" }
+  | { phase: "queued"; jobId: string; position: number }
+  | {
+      phase: "done";
+      stdout: string;
+      stderr: string;
+      exitCode: number;
+      timedOut: boolean;
+      error?: string;
+    };
+
 type Exercise =
   | {
       id: string;
-      type: "MULTIPLE_CHOICE" | "TRUE_FALSE" | "DESARROLLO";
+      type: "MULTIPLE_CHOICE" | "TRUE_FALSE";
       question: string;
       options: string[];
+      order: number;
+    }
+  | {
+      id: string;
+      type: "DESARROLLO";
+      question: string;
+      language: string;
+      template: string;
       order: number;
     }
   | {
@@ -59,6 +80,8 @@ export function LessonExercises({
 }: Props) {
   const { toast } = useToast();
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
+  const [executionState, setExecutionState] = useState<Record<string, ExecutionState>>({});
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState<{
     allCorrect: boolean;
@@ -77,6 +100,97 @@ export function LessonExercises({
     setAnswers((prev) => ({ ...prev, [exerciseId]: value }));
     setCheckResult(null);
   }
+
+  /** Encolar ejecución de código (solo ejercicios DESARROLLO) y mostrar posición / resultado */
+  async function handleRunCode(ex: { id: string; language: string; template: string }) {
+    const code = answers[ex.id] !== undefined ? String(answers[ex.id]) : ex.template;
+    const lang = ex.language === "node" ? "javascript" : ex.language;
+    setExecutionState((prev) => ({ ...prev, [ex.id]: { phase: "submitting" } }));
+    try {
+      const res = await fetch("/api/code/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          exerciseId: ex.id,
+          lessonId,
+          code,
+          language: lang,
+        }),
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Error al encolar");
+      setExecutionState((prev) => ({
+        ...prev,
+        [ex.id]: { phase: "queued", jobId: data.jobId, position: data.position },
+      }));
+    } catch (err) {
+      setExecutionState((prev) => ({ ...prev, [ex.id]: { phase: "idle" } }));
+      toast(err instanceof Error ? err.message : "Error al encolar la ejecución", "error");
+    }
+  }
+
+  /** Polling: actualizar estado del job y avanzar cola */
+  useEffect(() => {
+    const entries = Object.entries(executionState).filter(
+      (e): e is [string, { phase: "queued"; jobId: string; position: number }] =>
+        e[1].phase === "queued" && Boolean(e[1].jobId)
+    );
+    if (entries.length === 0) return;
+
+    const jobId = entries[0][1].jobId;
+    if (!jobId) return;
+
+    const tick = async () => {
+      try {
+        await fetch("/api/internal/process-queue", { method: "POST" });
+      } catch {
+        // Ignorar si process-queue no está disponible o da 403
+      }
+      const res = await fetch(`/api/code/jobs/${jobId}`);
+      const data = await res.json();
+      if (!res.ok) return;
+      if (data.status === "PENDING") {
+        setExecutionState((prev) => {
+          const cur = prev[entries[0][0]];
+          if (cur?.phase !== "queued") return prev;
+          return {
+            ...prev,
+            [entries[0][0]]: { phase: "queued", jobId, position: data.position ?? 1 },
+          };
+        });
+        return;
+      }
+      if (data.status === "COMPLETED" || data.status === "FAILED") {
+        const exId = entries[0][0];
+        setExecutionState((prev) => ({
+          ...prev,
+          [exId]:
+            data.status === "COMPLETED"
+              ? {
+                  phase: "done",
+                  stdout: data.stdout ?? "",
+                  stderr: data.stderr ?? "",
+                  exitCode: data.exitCode ?? 0,
+                  timedOut: Boolean(data.timedOut),
+                }
+              : {
+                  phase: "done",
+                  stdout: data.stdout ?? "",
+                  stderr: data.stderr ?? "",
+                  exitCode: data.exitCode ?? 1,
+                  timedOut: false,
+                  error: data.error ?? "Error en la ejecución",
+                },
+        }));
+      }
+    };
+
+    tick();
+    pollingRef.current = setInterval(tick, 2500);
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    };
+  }, [executionState]);
 
   /** Solicitar pista para un ejercicio */
   async function handleGetHint(exerciseId: string) {
@@ -329,10 +443,69 @@ export function LessonExercises({
             <p className="mb-3 font-medium text-foreground">{ex.question}</p>
 
             {ex.type === "DESARROLLO" && (
-              <p className="text-sm text-muted">
-                Ejercicio de desarrollo (próximamente). Este ejercicio se
-                evaluará en una futura versión.
-              </p>
+              <div className="mt-2 space-y-3">
+                <p className="text-sm text-muted">
+                  Escribe tu código y ejecútalo en el sandbox:
+                </p>
+                <CodeEditor
+                  language={ex.language}
+                  value={
+                    answers[ex.id] !== undefined
+                      ? String(answers[ex.id])
+                      : ex.template
+                  }
+                  onChange={(val) => setAnswer(ex.id, val)}
+                  height="300px"
+                />
+                {(() => {
+                  const exec = executionState[ex.id];
+                  const isSubmitting = exec?.phase === "submitting";
+                  const isQueued = exec?.phase === "queued";
+                  const isDone = exec?.phase === "done";
+                  return (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => handleRunCode(ex)}
+                        disabled={isSubmitting || isQueued}
+                        className="rounded border border-accent/50 bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50"
+                      >
+                        {isSubmitting
+                          ? "Enviando…"
+                          : isQueued
+                            ? "En cola…"
+                            : "Ejecutar"}
+                      </button>
+                      {isQueued && (
+                        <p className="text-sm text-muted">
+                          En cola, posición {exec.position}
+                        </p>
+                      )}
+                      {isDone && (
+                        <div className="rounded border border-border bg-background p-3 font-mono text-xs">
+                          <p className="mb-1 font-semibold text-muted">Salida:</p>
+                          {exec.stdout ? (
+                            <pre className="whitespace-pre-wrap break-words text-foreground">{exec.stdout}</pre>
+                          ) : (
+                            <span className="text-muted">(vacío)</span>
+                          )}
+                          {exec.stderr ? (
+                            <>
+                              <p className="mt-2 font-semibold text-error">stderr:</p>
+                              <pre className="whitespace-pre-wrap break-words text-error">{exec.stderr}</pre>
+                            </>
+                          ) : null}
+                          <p className="mt-2 text-muted">
+                            exitCode: {exec.exitCode}
+                            {exec.timedOut ? " · Tiempo agotado" : ""}
+                            {exec.error ? ` · ${exec.error}` : ""}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
             )}
 
             {ex.type === "CODE" && (
@@ -350,7 +523,6 @@ export function LessonExercises({
                   onChange={(val) => setAnswer(ex.id, val)}
                   height="300px"
                 />
-                {/* Test cases visibles */}
                 {ex.testCases.length > 0 && (
                   <div className="rounded border border-border bg-background p-3">
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">

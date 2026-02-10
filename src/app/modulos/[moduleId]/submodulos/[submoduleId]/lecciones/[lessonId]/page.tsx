@@ -84,7 +84,15 @@ export default async function LessonPage({ params }: Props) {
 
   const exercisesForClient = lesson.exercises.map((e) => {
     if (e.type === "DESARROLLO") {
-      return { id: e.id, type: "DESARROLLO" as const, question: e.question, options: [] as string[], order: e.order };
+      const devOpts = parseCodeOptions(e.options);
+      return {
+        id: e.id,
+        type: "DESARROLLO" as const,
+        question: e.question,
+        language: devOpts.language,
+        template: devOpts.template,
+        order: e.order,
+      };
     }
     if (e.type === "CODE") {
       const codeOpts = parseCodeOptions(e.options);

@@ -1,0 +1,9 @@
+{
+  "name": "qalab-sandbox",
+  "private": true,
+  "description": "Sandbox para ejecución de código (Java, JavaScript, TypeScript, Python)",
+  "dependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

@@ -141,7 +141,21 @@ export function AdminExercisesList({
         setFormCodeTemplate("");
         setFormCodeSolution("");
       }
-    } else if (e.type !== "DESARROLLO") {
+    } else if (e.type === "DESARROLLO") {
+      try {
+        const opts = JSON.parse(e.options) as { language?: string; template?: string };
+        const lang = opts?.language;
+        setFormCodeLanguage(
+          CODE_LANGUAGES.some((l) => l.value === lang)
+            ? (lang as "python" | "javascript" | "java" | "typescript")
+            : "javascript"
+        );
+        setFormCodeTemplate(typeof opts?.template === "string" ? opts.template : "");
+      } catch {
+        setFormCodeLanguage("javascript");
+        setFormCodeTemplate("");
+      }
+    } else {
       try {
         const opts = JSON.parse(e.options) as string[];
         setFormOptions(Array.isArray(opts) && opts.length > 0 ? opts : ["", ""]);
@@ -197,6 +211,10 @@ export function AdminExercisesList({
             type: "DESARROLLO" as const,
             question: formQuestion.trim(),
             order: formOrder,
+            options: {
+              language: formCodeLanguage,
+              template: formCodeTemplate,
+            },
           }
         : formType === "CODE"
           ? {
@@ -504,10 +522,40 @@ export function AdminExercisesList({
               />
             </label>
             {formType === "DESARROLLO" && (
-              <p className="rounded border border-border bg-surface px-3 py-2 text-sm text-muted">
-                Los ejemplos de ejercicios de desarrollo se crearán en otro
-                momento. Por ahora solo se guarda el enunciado y el orden.
-              </p>
+              <>
+                <p className="text-sm text-muted">
+                  El alumno podrá escribir código y ejecutarlo en el sandbox (Java, JavaScript, TypeScript o Python).
+                </p>
+                <label className="block">
+                  <span className="text-sm font-medium text-foreground">Lenguaje</span>
+                  <select
+                    value={formCodeLanguage}
+                    onChange={(e) =>
+                      setFormCodeLanguage(
+                        e.target.value as "python" | "javascript" | "java" | "typescript"
+                      )
+                    }
+                    className="mt-1 w-full max-w-[200px] rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                  >
+                    {CODE_LANGUAGES.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="block">
+                  <span className="mb-1 block text-sm font-medium text-foreground">
+                    Plantilla de código (opcional)
+                  </span>
+                  <CodeEditor
+                    language={formCodeLanguage}
+                    value={formCodeTemplate}
+                    onChange={(val) => setFormCodeTemplate(val)}
+                    height="200px"
+                  />
+                </div>
+              </>
             )}
             {formType === "CODE" && (
               <>
