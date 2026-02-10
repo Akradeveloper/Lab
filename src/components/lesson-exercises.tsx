@@ -20,6 +20,8 @@ type Exercise =
       language: string;
       template: string;
       testCases: Array<{ input: string; expectedOutput: string }>;
+      immutablePrefix?: string;
+      immutableSuffix?: string;
       order: number;
     };
 
@@ -340,16 +342,47 @@ export function LessonExercises({
                 <p className="text-sm text-muted">
                   Edita el código para que pase los tests:
                 </p>
-                <CodeEditor
-                  language={ex.language}
-                  value={
-                    answers[ex.id] !== undefined
-                      ? String(answers[ex.id])
-                      : ex.template
-                  }
-                  onChange={(val) => setAnswer(ex.id, val)}
-                  height="300px"
-                />
+                {ex.immutablePrefix != null && ex.immutablePrefix.trim() !== "" && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                      Código base (solo lectura)
+                    </span>
+                    <CodeEditor
+                      language={ex.language}
+                      value={ex.immutablePrefix}
+                      readOnly
+                      height="120px"
+                    />
+                  </div>
+                )}
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                    Tu código
+                  </span>
+                  <CodeEditor
+                    language={ex.language}
+                    value={
+                      answers[ex.id] !== undefined
+                        ? String(answers[ex.id])
+                        : ex.template
+                    }
+                    onChange={(val) => setAnswer(ex.id, val)}
+                    height="300px"
+                  />
+                </div>
+                {ex.immutableSuffix != null && ex.immutableSuffix.trim() !== "" && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                      Código final (solo lectura)
+                    </span>
+                    <CodeEditor
+                      language={ex.language}
+                      value={ex.immutableSuffix}
+                      readOnly
+                      height="120px"
+                    />
+                  </div>
+                )}
                 {/* Test cases visibles */}
                 {ex.testCases.length > 0 && (
                   <div className="rounded border border-border bg-background p-3">

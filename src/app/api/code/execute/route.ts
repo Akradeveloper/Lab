@@ -35,6 +35,22 @@ export async function POST(request: Request) {
       return badRequest("Ejercicio no encontrado o no es de tipo DESARROLLO");
     }
 
+    let finalCode = code;
+    try {
+      const opts = JSON.parse(exercise.options) as {
+        immutablePrefix?: string;
+        immutableSuffix?: string;
+      };
+      const prefix = typeof opts?.immutablePrefix === "string" ? opts.immutablePrefix.trim() : "";
+      const suffix = typeof opts?.immutableSuffix === "string" ? opts.immutableSuffix.trim() : "";
+      if (prefix !== "" || suffix !== "") {
+        finalCode =
+          (prefix ? prefix + "\n" : "") + code.trim() + (suffix ? "\n" + suffix : "");
+      }
+    } catch {
+      // Si options no es JSON válido, usar code tal cual
+    }
+
     const redis = getRedis();
     if (!redis) {
       return NextResponse.json(
@@ -55,7 +71,7 @@ export async function POST(request: Request) {
       userId: session.user.id,
       exerciseId,
       lessonId,
-      code,
+      code: finalCode,
       language,
       source: "alumno",
       position,

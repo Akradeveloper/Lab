@@ -39,6 +39,14 @@ export function AdminExercisesList({
   >("javascript");
   const [formCodeTemplate, setFormCodeTemplate] = useState("");
   const [formCodeSolution, setFormCodeSolution] = useState("");
+  const [formImmutablePrefix, setFormImmutablePrefix] = useState("");
+  const [formImmutableSuffix, setFormImmutableSuffix] = useState("");
+  const [formDevLanguage, setFormDevLanguage] = useState<
+    "python" | "javascript" | "java" | "typescript"
+  >("javascript");
+  const [formDevImmutablePrefix, setFormDevImmutablePrefix] = useState("");
+  const [formDevImmutableSuffix, setFormDevImmutableSuffix] = useState("");
+  const [formDevEditableTemplate, setFormDevEditableTemplate] = useState("");
   const [saving, setSaving] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
   const [generateTypes, setGenerateTypes] = useState<string[]>([]);
@@ -112,6 +120,12 @@ export function AdminExercisesList({
     setFormCodeLanguage("javascript");
     setFormCodeTemplate("");
     setFormCodeSolution("");
+    setFormImmutablePrefix("");
+    setFormImmutableSuffix("");
+    setFormDevLanguage("javascript");
+    setFormDevImmutablePrefix("");
+    setFormDevImmutableSuffix("");
+    setFormDevEditableTemplate("");
     setShowForm(true);
   }
 
@@ -127,6 +141,8 @@ export function AdminExercisesList({
           language?: string;
           template?: string;
           testCases?: unknown[];
+          immutablePrefix?: string;
+          immutableSuffix?: string;
         };
         const lang = opts?.language;
         setFormCodeLanguage(
@@ -136,10 +152,37 @@ export function AdminExercisesList({
         );
         setFormCodeTemplate(typeof opts?.template === "string" ? opts.template : "");
         setFormCodeSolution(typeof e.correctAnswer === "string" ? e.correctAnswer : "");
+        setFormImmutablePrefix(typeof opts?.immutablePrefix === "string" ? opts.immutablePrefix : "");
+        setFormImmutableSuffix(typeof opts?.immutableSuffix === "string" ? opts.immutableSuffix : "");
       } catch {
         setFormCodeLanguage("javascript");
         setFormCodeTemplate("");
         setFormCodeSolution("");
+        setFormImmutablePrefix("");
+        setFormImmutableSuffix("");
+      }
+    } else if (e.type === "DESARROLLO") {
+      try {
+        const opts = JSON.parse(e.options) as {
+          language?: string;
+          immutablePrefix?: string;
+          immutableSuffix?: string;
+          editableTemplate?: string;
+        };
+        const lang = opts?.language;
+        setFormDevLanguage(
+          CODE_LANGUAGES.some((l) => l.value === lang)
+            ? (lang as "python" | "javascript" | "java" | "typescript")
+            : "javascript"
+        );
+        setFormDevImmutablePrefix(typeof opts?.immutablePrefix === "string" ? opts.immutablePrefix : "");
+        setFormDevImmutableSuffix(typeof opts?.immutableSuffix === "string" ? opts.immutableSuffix : "");
+        setFormDevEditableTemplate(typeof opts?.editableTemplate === "string" ? opts.editableTemplate : "");
+      } catch {
+        setFormDevLanguage("javascript");
+        setFormDevImmutablePrefix("");
+        setFormDevImmutableSuffix("");
+        setFormDevEditableTemplate("");
       }
     } else if (e.type !== "DESARROLLO") {
       try {
@@ -197,6 +240,12 @@ export function AdminExercisesList({
             type: "DESARROLLO" as const,
             question: formQuestion.trim(),
             order: formOrder,
+            options: {
+              language: formDevLanguage,
+              immutablePrefix: formDevImmutablePrefix,
+              immutableSuffix: formDevImmutableSuffix,
+              editableTemplate: formDevEditableTemplate,
+            },
           }
         : formType === "CODE"
           ? {
@@ -207,6 +256,8 @@ export function AdminExercisesList({
                 language: formCodeLanguage,
                 template: formCodeTemplate,
                 testCases: [] as Array<{ input: string; expectedOutput: string }>,
+                immutablePrefix: formImmutablePrefix,
+                immutableSuffix: formImmutableSuffix,
               },
               correctAnswer: formCodeSolution,
             }
@@ -504,17 +555,76 @@ export function AdminExercisesList({
               />
             </label>
             {formType === "DESARROLLO" && (
-              <p className="rounded border border-border bg-surface px-3 py-2 text-sm text-muted">
-                Los ejemplos de ejercicios de desarrollo se crearán en otro
-                momento. Por ahora solo se guarda el enunciado y el orden.
-              </p>
+              <>
+                <p className="text-sm text-muted">
+                  El alumno solo podrá editar la parte &quot;Plantilla editable&quot;.
+                  El código inmutable (inicio y/o final) se concatena en el servidor al ejecutar.
+                </p>
+                <label className="block">
+                  <span className="text-sm font-medium text-foreground">
+                    Lenguaje por defecto
+                  </span>
+                  <select
+                    value={formDevLanguage}
+                    onChange={(e) =>
+                      setFormDevLanguage(
+                        e.target.value as
+                          | "python"
+                          | "javascript"
+                          | "java"
+                          | "typescript"
+                      )
+                    }
+                    className="mt-1 w-full max-w-[200px] rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                  >
+                    {CODE_LANGUAGES.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="block">
+                  <span className="mb-1 block text-sm font-medium text-foreground">
+                    Código inmutable (inicio)
+                  </span>
+                  <CodeEditor
+                    language={formDevLanguage}
+                    value={formDevImmutablePrefix}
+                    onChange={(val) => setFormDevImmutablePrefix(val)}
+                    height="120px"
+                  />
+                </div>
+                <div className="block">
+                  <span className="mb-1 block text-sm font-medium text-foreground">
+                    Plantilla editable (lo que el alumno completa)
+                  </span>
+                  <CodeEditor
+                    language={formDevLanguage}
+                    value={formDevEditableTemplate}
+                    onChange={(val) => setFormDevEditableTemplate(val)}
+                    height="160px"
+                  />
+                </div>
+                <div className="block">
+                  <span className="mb-1 block text-sm font-medium text-foreground">
+                    Código inmutable (final)
+                  </span>
+                  <CodeEditor
+                    language={formDevLanguage}
+                    value={formDevImmutableSuffix}
+                    onChange={(val) => setFormDevImmutableSuffix(val)}
+                    height="120px"
+                  />
+                </div>
+              </>
             )}
             {formType === "CODE" && (
               <>
                 <p className="text-sm text-muted">
-                  El enunciado debe describir la tarea (completar desarrollo,
-                  arreglar errores, etc.). La solución es el código exacto con
-                  el que se comparará la respuesta del alumno.
+                  El enunciado debe describir la tarea. Si defines código inmutable,
+                  el alumno solo verá y editará la plantilla; la solución se compara
+                  solo con la parte editable.
                 </p>
                 <label className="block">
                   <span className="text-sm font-medium text-foreground">
@@ -542,7 +652,18 @@ export function AdminExercisesList({
                 </label>
                 <div className="block">
                   <span className="mb-1 block text-sm font-medium text-foreground">
-                    Código inicial (plantilla)
+                    Código inmutable (inicio)
+                  </span>
+                  <CodeEditor
+                    language={formCodeLanguage}
+                    value={formImmutablePrefix}
+                    onChange={(val) => setFormImmutablePrefix(val)}
+                    height="120px"
+                  />
+                </div>
+                <div className="block">
+                  <span className="mb-1 block text-sm font-medium text-foreground">
+                    Código inicial (plantilla editable)
                   </span>
                   <CodeEditor
                     language={formCodeLanguage}
@@ -553,7 +674,18 @@ export function AdminExercisesList({
                 </div>
                 <div className="block">
                   <span className="mb-1 block text-sm font-medium text-foreground">
-                    Solución (código correcto)
+                    Código inmutable (final)
+                  </span>
+                  <CodeEditor
+                    language={formCodeLanguage}
+                    value={formImmutableSuffix}
+                    onChange={(val) => setFormImmutableSuffix(val)}
+                    height="120px"
+                  />
+                </div>
+                <div className="block">
+                  <span className="mb-1 block text-sm font-medium text-foreground">
+                    Solución (solo la parte editable)
                   </span>
                   <CodeEditor
                     language={formCodeLanguage}

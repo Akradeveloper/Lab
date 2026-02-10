@@ -95,6 +95,8 @@ export default async function LessonPage({ params }: Props) {
         language: codeOpts.language,
         template: codeOpts.template,
         testCases: codeOpts.testCases,
+        immutablePrefix: codeOpts.immutablePrefix,
+        immutableSuffix: codeOpts.immutableSuffix,
         order: e.order,
       };
     }
@@ -347,6 +349,8 @@ function parseCodeOptions(options: string): {
   language: string;
   template: string;
   testCases: Array<{ input: string; expectedOutput: string }>;
+  immutablePrefix: string;
+  immutableSuffix: string;
 } {
   try {
     const parsed = JSON.parse(options) as Record<string, unknown>;
@@ -357,8 +361,10 @@ function parseCodeOptions(options: string): {
           (tc) => tc && typeof tc.input === "string" && typeof tc.expectedOutput === "string"
         ).map((tc) => ({ input: tc.input!, expectedOutput: tc.expectedOutput! }))
       : [];
-    return { language, template, testCases };
+    const immutablePrefix = typeof parsed?.immutablePrefix === "string" ? parsed.immutablePrefix : "";
+    const immutableSuffix = typeof parsed?.immutableSuffix === "string" ? parsed.immutableSuffix : "";
+    return { language, template, testCases, immutablePrefix, immutableSuffix };
   } catch {
-    return { language: "javascript", template: "", testCases: [] };
+    return { language: "javascript", template: "", testCases: [], immutablePrefix: "", immutableSuffix: "" };
   }
 }

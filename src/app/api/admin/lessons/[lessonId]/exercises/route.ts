@@ -53,17 +53,38 @@ export async function POST(request: Request, { params }: Params) {
     let correctStr: string;
     if (type === "CODE") {
       const codeOpts = options != null && typeof options === "object" && !Array.isArray(options)
-        ? options as { language?: string; template?: string; testCases?: Array<{ input: string; expectedOutput: string }> }
+        ? options as {
+            language?: string;
+            template?: string;
+            testCases?: Array<{ input: string; expectedOutput: string }>;
+            immutablePrefix?: string;
+            immutableSuffix?: string;
+          }
         : {};
       optionsStr = JSON.stringify({
         language: typeof codeOpts.language === "string" ? codeOpts.language : "javascript",
         template: typeof codeOpts.template === "string" ? codeOpts.template : "",
         testCases: Array.isArray(codeOpts.testCases) ? codeOpts.testCases : [],
+        immutablePrefix: typeof codeOpts.immutablePrefix === "string" ? codeOpts.immutablePrefix : "",
+        immutableSuffix: typeof codeOpts.immutableSuffix === "string" ? codeOpts.immutableSuffix : "",
       });
       correctStr =
         typeof correctAnswer === "string" ? correctAnswer : "";
     } else if (type === "DESARROLLO") {
-      optionsStr = "{}";
+      const devOpts = options != null && typeof options === "object" && !Array.isArray(options)
+        ? options as {
+            language?: string;
+            immutablePrefix?: string;
+            immutableSuffix?: string;
+            editableTemplate?: string;
+          }
+        : {};
+      optionsStr = JSON.stringify({
+        language: typeof devOpts.language === "string" ? devOpts.language : "",
+        immutablePrefix: typeof devOpts.immutablePrefix === "string" ? devOpts.immutablePrefix : "",
+        immutableSuffix: typeof devOpts.immutableSuffix === "string" ? devOpts.immutableSuffix : "",
+        editableTemplate: typeof devOpts.editableTemplate === "string" ? devOpts.editableTemplate : "",
+      });
       correctStr = "";
     } else {
       optionsStr =
