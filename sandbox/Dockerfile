@@ -5,10 +5,10 @@ RUN apk add --no-cache python3 openjdk17-jdk
 
 WORKDIR /app
 
-COPY package.json ./
+COPY sandbox/package.json ./
 RUN npm install --omit=dev
 
-COPY server.mjs ./
+COPY sandbox/server.mjs ./
 
 RUN addgroup -g 1001 -S sandbox && adduser -u 1001 -S sandbox -G sandbox
 RUN chown -R sandbox:sandbox /app

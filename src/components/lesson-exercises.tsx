@@ -116,6 +116,7 @@ export function LessonExercises({
           code,
           language: lang,
         }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Error al encolar");
       setExecutionState((prev) => ({

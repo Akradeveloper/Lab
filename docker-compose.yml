@@ -20,15 +20,21 @@ services:
 
   sandbox:
     build:
-      context: ./sandbox
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: sandbox/Dockerfile
     restart: unless-stopped
+    profiles:
+      - with-sandbox
     # Solo red interna; la app y el worker usan http://sandbox:3001/run
     expose:
       - "3001"
 
   app:
-    image: qalab-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
     restart: unless-stopped
     depends_on:
       db:
