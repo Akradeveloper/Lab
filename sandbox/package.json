@@ -5,6 +5,9 @@
   "type": "module",
   "description": "Sandbox para ejecución de código (Python, JavaScript, Java, TypeScript)",
   "dependencies": {
+    "cypress": "^13.6.0",
+    "playwright": "^1.40.0",
+    "selenium-webdriver": "^4.15.0",
     "tsx": "^4.19.2"
   }
 }
