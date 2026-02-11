@@ -184,7 +184,7 @@ export function AdminExercisesList({
         setFormDevImmutableSuffix("");
         setFormDevEditableTemplate("");
       }
-    } else if (e.type !== "DESARROLLO") {
+    } else {
       try {
         const opts = JSON.parse(e.options) as string[];
         setFormOptions(Array.isArray(opts) && opts.length > 0 ? opts : ["", ""]);
