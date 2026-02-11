@@ -1,8 +1,13 @@
 import http from "http";
 import { spawn } from "child_process";
 import { writeFile, mkdtemp } from "fs/promises";
-import { join } from "path";
+import { join, dirname } from "path";
 import { tmpdir } from "os";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const APP_ROOT = process.env.SANDBOX_APP_DIR || __dirname;
+const APP_NODE_MODULES = join(APP_ROOT, "node_modules");
 
 const PORT = Number(process.env.PORT) || 3001;
 const TIMEOUT_MS = 45_000;
@@ -47,7 +52,7 @@ async function runCode(language, code, stdin = "") {
     if (config.isJava) {
       const javaFile = join(dir, "Main.java");
       await writeFile(javaFile, code, "utf8");
-      const cp = `.:/app/selenium/*`;
+      const cp = `.:${join(APP_ROOT, "selenium", "*")}`;
       const javac = spawn("javac", ["-cp", cp, "Main.java"], { cwd: dir });
       let err = "";
       javac.stderr?.on("data", (d) => (err += d.toString()));
@@ -62,13 +67,24 @@ async function runCode(language, code, stdin = "") {
     if (config.isCypress) {
       const specPath = join(dir, config.specFile);
       await writeFile(specPath, code, "utf8");
-      const proc = spawn("npx", ["cypress", "run", "--spec", specPath], { cwd: "/app" });
+      const proc = spawn("npx", ["cypress", "run", "--spec", specPath], {
+        cwd: APP_ROOT,
+        env: {
+          ...process.env,
+          HOME: APP_ROOT,
+          CYPRESS_CACHE_FOLDER: join(APP_ROOT, ".cache", "Cypress"),
+        },
+      });
       return runProcess(proc, stdin, TIMEOUT_MS);
     }
 
     const file = join(dir, `main.${config.ext}`);
     await writeFile(file, code, "utf8");
-    const proc = spawn(config.cmd, config.args(file), { cwd: dir });
+    const isNode = language === "javascript" || language === "typescript";
+    const proc = spawn(config.cmd, config.args(file), {
+      cwd: dir,
+      ...(isNode && { env: { ...process.env, NODE_PATH: APP_NODE_MODULES } }),
+    });
     return runProcess(proc, stdin, TIMEOUT_MS);
   } finally {
     // Temp dir left for OS to clean; no unlink of dir in Node easily

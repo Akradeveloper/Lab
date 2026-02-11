@@ -38,6 +38,15 @@ Para usar **Judge0** self-hosted en lugar de Piston:
 
 Los pasos para montar Judge0 (p. ej. con Docker) suelen estar en el README del proyecto o en la carpeta `judge0-docker/` si existe en el repo.
 
+**Sandbox propio (Redis + cola):** Si usas el sandbox incluido en el repo (carpeta `sandbox/`, servidor Node que expone `POST /run`), necesitas **Redis** y la URL del sandbox:
+
+| Variable | Descripción |
+|----------|-------------|
+| `REDIS_URL` | URL de Redis (ej. `redis://localhost:6379`). |
+| `SANDBOX_URL` | URL base del servidor sandbox (ej. `http://localhost:3001`). La cola (process-queue) enviará los jobs a `${SANDBOX_URL}/run`. |
+
+Para que la ejecución de ejercicios y el sandbox de admin no tengan errores por módulos o dependencias faltantes (Java, Cypress, Node, Python), el sandbox debe ejecutarse **dentro del contenedor Docker** (donde existen `/app`, JARs de Selenium, binario de Cypress, etc.). Ver [sandbox/README.md](../../sandbox/README.md) en el repo.
+
 ## Configuración desde el panel Admin
 
 Parte de la configuración no se define en variables de entorno sino en la base de datos (tabla AppConfig), y se gestiona desde **Admin → Configuración**: modelo de IA, límites de testimonios, rate limit de registro, **tiempo de espera para reenviar proyecto tras rechazo** (por defecto 72 horas), logros (hitos de lecciones), etc. El tiempo de espera para reenviar proyectos se configura en la pestaña "Entregas de proyectos".

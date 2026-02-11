@@ -34,6 +34,10 @@ WORKDIR /app
 COPY sandbox/package.json ./
 RUN npm install --omit=dev
 
+# Cypress: instalar binario en /app para que el usuario sandbox lo encuentre
+ENV CYPRESS_CACHE_FOLDER=/app/.cache/Cypress
+RUN npx cypress install
+
 # Playwright: instalar navegador Chromium en /app para que el usuario sandbox lo use
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/playwright-browsers
 RUN npx playwright install chromium --with-deps
@@ -47,6 +51,9 @@ RUN chown -R sandbox:sandbox /app
 # Chromium del sistema para Selenium (Python/Java)
 ENV CHROME_BIN=/usr/bin/chromium
 ENV CHROMIUM_FLAGS="--no-sandbox --headless --disable-gpu --disable-dev-shm-usage"
+
+# HOME escribible para que Selenium (Node) pueda crear ~/.cache/selenium
+ENV HOME=/app
 
 USER sandbox
 
