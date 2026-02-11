@@ -3,7 +3,7 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 
 COPY package*.json ./
-RUN if [ -f package-lock.json ]; then npm ci; else npm install --omit=dev; fi
+RUN npm install --omit=dev
 
 # ---- Stage 2: Build ----
 FROM node:22-alpine AS build
