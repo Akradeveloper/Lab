@@ -29,7 +29,7 @@ services:
       context: .
       dockerfile: sandbox/Dockerfile
     restart: unless-stopped
-    expose:
+    ports:
       - "3001:3001"
 
   app:
