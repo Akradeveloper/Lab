@@ -15,7 +15,7 @@ WORKDIR /tmp/pw
 RUN printf '%s\n' \
   '<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">' \
   '  <modelVersion>4.0.0</modelVersion><groupId>t</groupId><artifactId>t</artifactId><version>1</version>' \
-  '  <dependencies><dependency><groupId>com.microsoft.playwright</groupId><artifactId>playwright</artifactId><version>1.49.0</version></dependency></dependencies>' \
+  '  <dependencies><dependency><groupId>com.microsoft.playwright</groupId><artifactId>playwright</artifactId><version>1.40.0</version></dependency></dependencies>' \
   '</project>' > pom.xml
 RUN mvn -q dependency:copy-dependencies -DoutputDirectory=/out
 RUN mv /out /playwright-jars
@@ -50,12 +50,13 @@ RUN npm install --omit=dev
 ENV CYPRESS_CACHE_FOLDER=/app/.cache/Cypress
 RUN npx cypress install
 
-# Playwright: instalar navegador Chromium en /app para que el usuario sandbox lo use
+# Playwright: dependencias de sistema y navegador Chromium en /app para que Node y Java no descarguen en runtime
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/playwright-browsers
+RUN npx playwright install-deps chromium
 RUN npx playwright install chromium --with-deps
 
 COPY sandbox/server.mjs ./
-COPY sandbox/cypress.config.js ./
+COPY sandbox/cypress.config.cjs ./
 
 RUN addgroup --system --gid 1001 sandbox && adduser --system --uid 1001 --gid 1001 sandbox
 RUN chown -R sandbox:sandbox /app
