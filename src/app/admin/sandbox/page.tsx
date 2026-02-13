@@ -17,7 +17,7 @@ const FRAMEWORKS = [
 ] as const;
 
 function getFrameworksForLanguage(lang: string): readonly { value: string; label: string }[] {
-  if (lang === "java") return FRAMEWORKS.filter((f) => f.value === "selenium");
+  if (lang === "java") return FRAMEWORKS.filter((f) => f.value === "selenium" || f.value === "playwright");
   if (lang === "python") return FRAMEWORKS.filter((f) => f.value === "selenium" || f.value === "playwright");
   if (lang === "javascript" || lang === "typescript") return FRAMEWORKS;
   return FRAMEWORKS;
@@ -255,6 +255,23 @@ public class Main {
         }
     }
 }`,
+        playwright: `import com.microsoft.playwright.*;
+
+public class Main {
+    public static void main(String[] args) {
+        try (Playwright playwright = Playwright.create()) {
+            Browser browser = playwright.chromium().launch();
+            Page page = browser.newPage();
+            page.navigate("https://www.iana.org/domains/reserved");
+            String title = page.title();
+            if (title == null || !title.contains("IANA")) {
+                throw new RuntimeException("Título incorrecto: " + title);
+            }
+            System.out.println("OK: el título coincide");
+            browser.close();
+        }
+    }
+}`,
       },
     },
   },
@@ -403,6 +420,23 @@ public class Main {
             System.out.println("OK: click y texto encontrado");
         } finally {
             driver.quit();
+        }
+    }
+}`,
+        playwright: `import com.microsoft.playwright.*;
+
+public class Main {
+    public static void main(String[] args) {
+        try (Playwright playwright = Playwright.create()) {
+            Browser browser = playwright.chromium().launch();
+            Page page = browser.newPage();
+            page.navigate("https://ejemplo.com");
+            page.locator("button.primary").click();
+            if (!page.getByText("texto esperado").isVisible()) {
+                throw new RuntimeException("Texto no visible");
+            }
+            System.out.println("OK: click y texto encontrado");
+            browser.close();
         }
     }
 }`,
@@ -582,6 +616,27 @@ public class Main {
         }
     }
 }`,
+        playwright: `import com.microsoft.playwright.*;
+
+public class Main {
+    public static void main(String[] args) {
+        try (Playwright playwright = Playwright.create()) {
+            Browser browser = playwright.chromium().launch();
+            Page page = browser.newPage();
+            String url1 = "https://www.iana.org";
+            page.navigate(url1);
+            page.navigate("https://www.iana.org/domains/reserved");
+            page.goBack();
+            String current = page.url();
+            if (current == null || !current.contains("iana.org")) {
+                throw new RuntimeException("URL incorrecta tras atrás: " + current);
+            }
+            page.reload();
+            System.out.println("OK: navegación (atrás y refresh) correcta");
+            browser.close();
+        }
+    }
+}`,
       },
     },
   },
@@ -634,7 +689,9 @@ export default function AdminSandboxPage() {
       ? "cypress-js"
       : framework === "cypress" && language === "typescript"
         ? "cypress-ts"
-        : language;
+        : framework === "playwright" && language === "java"
+          ? "java-playwright"
+          : language;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

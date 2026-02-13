@@ -9,7 +9,18 @@ RUN printf '%s\n' \
 RUN mvn -q dependency:copy-dependencies -DoutputDirectory=/out
 RUN mv /out /selenium-jars
 
-# Stage 2: Sandbox con Node, Python, Java, Chromium, Selenium y Playwright
+# Stage 2: Obtener JARs de Playwright para Java
+FROM maven:3.9-eclipse-temurin-17-alpine AS playwright-java-deps
+WORKDIR /tmp/pw
+RUN printf '%s\n' \
+  '<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">' \
+  '  <modelVersion>4.0.0</modelVersion><groupId>t</groupId><artifactId>t</artifactId><version>1</version>' \
+  '  <dependencies><dependency><groupId>com.microsoft.playwright</groupId><artifactId>playwright</artifactId><version>1.49.0</version></dependency></dependencies>' \
+  '</project>' > pom.xml
+RUN mvn -q dependency:copy-dependencies -DoutputDirectory=/out
+RUN mv /out /playwright-jars
+
+# Stage 3: Sandbox con Node, Python, Java, Chromium, Selenium y Playwright
 FROM node:22-bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -26,8 +37,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip3 install --break-system-packages selenium playwright \
     && python3 -m playwright install chromium
 
-# JARs de Selenium para Java (desde stage 1)
+# JARs de Selenium y Playwright para Java (desde stages 1 y 2)
 COPY --from=selenium-deps /selenium-jars /app/selenium
+COPY --from=playwright-java-deps /playwright-jars /app/playwright-java
 
 WORKDIR /app
 

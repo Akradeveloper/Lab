@@ -11,7 +11,7 @@ import {
   JOB_TTL_SEC,
 } from "@/lib/redis";
 
-const VALID_LANGS = ["python", "javascript", "java", "typescript"];
+const VALID_LANGS = ["python", "javascript", "java", "typescript", "java-playwright"];
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       return badRequest("Faltan exerciseId, lessonId o code");
     }
     if (!VALID_LANGS.includes(language)) {
-      return badRequest("language debe ser python, javascript, java o typescript");
+      return badRequest("language debe ser python, javascript, java, typescript o java-playwright");
     }
 
     const exercise = await prisma.exercise.findFirst({

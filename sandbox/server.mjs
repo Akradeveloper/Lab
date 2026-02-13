@@ -16,7 +16,8 @@ const LANGS = {
   python: { ext: "py", cmd: "python3", args: (f) => [f] },
   javascript: { ext: "js", cmd: "node", args: (f) => [f] },
   typescript: { ext: "ts", cmd: "npx", args: (f) => ["tsx", f] },
-  java: { ext: "java", file: "Main.java", isJava: true },
+  java: { ext: "java", file: "Main.java", isJava: true, javaCp: "selenium" },
+  "java-playwright": { ext: "java", file: "Main.java", isJava: true, javaCp: "playwright-java" },
   "cypress-js": { isCypress: true, specFile: "spec.cy.js" },
   "cypress-ts": { isCypress: true, specFile: "spec.cy.ts" },
 };
@@ -52,7 +53,8 @@ async function runCode(language, code, stdin = "") {
     if (config.isJava) {
       const javaFile = join(dir, "Main.java");
       await writeFile(javaFile, code, "utf8");
-      const cp = `.:${join(APP_ROOT, "selenium", "*")}`;
+      const cpDir = config.javaCp || "selenium";
+      const cp = `.:${join(APP_ROOT, cpDir, "*")}`;
       const javac = spawn("javac", ["-cp", cp, "Main.java"], { cwd: dir });
       let err = "";
       javac.stderr?.on("data", (d) => (err += d.toString()));
@@ -60,7 +62,10 @@ async function runCode(language, code, stdin = "") {
       if (compExit !== 0) {
         return { stdout: "", stderr: err || "Error de compilación", exitCode: compExit, timedOut: false };
       }
-      const proc = spawn("java", ["-cp", cp, "Main"], { cwd: dir });
+      const javaEnv = config.javaCp === "playwright-java"
+        ? { ...process.env, PLAYWRIGHT_BROWSERS_PATH: join(APP_ROOT, "playwright-browsers") }
+        : undefined;
+      const proc = spawn("java", ["-cp", cp, "Main"], { cwd: dir, env: javaEnv });
       return runProcess(proc, stdin, TIMEOUT_MS);
     }
 

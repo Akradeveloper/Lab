@@ -8,7 +8,7 @@ import {
 } from "@/lib/redis";
 import { randomUUID } from "crypto";
 
-const VALID_LANGS = ["python", "javascript", "java", "typescript", "cypress-js", "cypress-ts"];
+const VALID_LANGS = ["python", "javascript", "java", "typescript", "cypress-js", "cypress-ts", "java-playwright"];
 
 export async function POST(request: Request) {
   const session = await getAdminSession();
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     }
     if (!VALID_LANGS.includes(language)) {
       return badRequest(
-        "language debe ser python, javascript, java, typescript, cypress-js o cypress-ts"
+        "language debe ser python, javascript, java, typescript, cypress-js, cypress-ts o java-playwright"
       );
     }
 
