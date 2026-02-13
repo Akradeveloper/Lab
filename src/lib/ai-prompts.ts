@@ -215,6 +215,7 @@ Tipos permitidos:
 - MULTIPLE_CHOICE: 4 opciones, una correcta. Sin campo de dificultad.
 - TRUE_FALSE: verdadero o falso. Sin campo de dificultad.
 - CODE: ejercicio de programación con ejecución de código. Incluye campo "difficulty".
+- DESARROLLO: ejercicio de código que el alumno completa y ejecuta; se evalúa por ejecución sin error (exit code 0). Sin testCases ni solution. Genera como máximo 2 ejercicios DESARROLLO por lección. El enunciado debe estar claramente ligado al tema de la lección.
 
 Formato JSON para cada tipo:
 
@@ -230,6 +231,10 @@ CODE:
 { "type": "CODE", "question": "enunciado", "language": "javascript"|"python"|"typescript"|"java", "template": "código inicial para el alumno (con huecos o pocos cambios)", "solution": "código correcto completo que debe coincidir con la respuesta del alumno", "testCases": [ { "input": "entrada por stdin", "expectedOutput": "salida esperada" } ], "difficulty": "APRENDIZ"|"JUNIOR"|"MID"|"SENIOR"|"ESPECIALISTA" }
 Incluir al menos un test case. El campo "solution" es el código solución. El campo "difficulty" es obligatorio para CODE.
 
+DESARROLLO:
+{ "type": "DESARROLLO", "question": "enunciado", "language": "javascript"|"python"|"typescript"|"java", "immutablePrefix": "código que ve el alumno antes (opcional, puede ser cadena vacía)", "immutableSuffix": "código que ve el alumno después (opcional)", "editableTemplate": "código que el alumno debe completar o modificar" }
+immutablePrefix e immutableSuffix son opcionales (pueden omitirse o ser ""). editableTemplate es obligatorio. No incluir testCases ni solution.
+
 Responde ÚNICAMENTE con un JSON: { "exercises": [ ... ] }.
 Mezcla tipos. Las preguntas evalúan comprensión del contenido.`;
 }
@@ -241,12 +246,22 @@ type ExerciseContext = {
   allowedTypes?: string[];
   codeLanguage?: string;
   codeDifficulty?: string;
+  lessonDifficulty?: string;
 };
 
 export function buildExerciseUserPrompt(ctx: ExerciseContext): string {
   const parts: string[] = [];
 
   parts.push(`Lección: "${ctx.lessonTitle}"\n\nContenido:\n${ctx.lessonContent}`);
+  parts.push(
+    "Los enunciados de todos los ejercicios, en particular los de tipo DESARROLLO, deben ser coherentes con el título y el contenido de la lección.",
+  );
+
+  if (ctx.lessonDifficulty) {
+    parts.push(
+      `La lección tiene nivel de dificultad ${ctx.lessonDifficulty}. Todos los ejercicios (incluidos CODE y DESARROLLO) deben ser acordes a este nivel. ${difficultyFragment(ctx.lessonDifficulty)}`,
+    );
+  }
 
   if (ctx.allowedTypes && ctx.allowedTypes.length > 0) {
     parts.push(
@@ -255,8 +270,11 @@ export function buildExerciseUserPrompt(ctx: ExerciseContext): string {
   }
 
   if (ctx.codeLanguage) {
+    const typesDesc = ctx.allowedTypes?.includes("DESARROLLO")
+      ? "CODE y DESARROLLO"
+      : "CODE";
     parts.push(
-      `Para todos los ejercicios de tipo CODE, usa únicamente el lenguaje ${ctx.codeLanguage}. El campo "language" debe ser "${ctx.codeLanguage}" y template/solution deben estar escritos en ese lenguaje.`,
+      `Para todos los ejercicios de tipo ${typesDesc}, usa únicamente el lenguaje ${ctx.codeLanguage}. El campo "language" debe ser "${ctx.codeLanguage}" y template/solution (o editableTemplate en DESARROLLO) deben estar escritos en ese lenguaje.`,
     );
   }
 
@@ -268,7 +286,7 @@ export function buildExerciseUserPrompt(ctx: ExerciseContext): string {
 
   if (ctx.allowedTypes?.includes("DESARROLLO")) {
     parts.push(
-      'Si generas ejercicios de tipo DESARROLLO: usa solo lenguajes soportados por el sandbox (Python, JavaScript, TypeScript, Java con Selenium o Playwright). Las plantillas de código deben ser ejecutables en ese entorno.',
+      'Si generas ejercicios de tipo DESARROLLO: usa solo lenguajes soportados por el sandbox (Python, JavaScript, TypeScript, Java con Selenium o Playwright). Las plantillas de código deben ser ejecutables en ese entorno. Incluye como máximo 2 ejercicios de tipo DESARROLLO. El resto deben ser de los otros tipos indicados.',
     );
   }
 

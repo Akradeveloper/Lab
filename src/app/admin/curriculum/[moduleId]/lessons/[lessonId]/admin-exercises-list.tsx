@@ -64,6 +64,7 @@ export function AdminExercisesList({
     "python" | "javascript" | "java" | "typescript"
   >("javascript");
   const [generateCodeDifficulty, setGenerateCodeDifficulty] = useState("");
+  const [generateCount, setGenerateCount] = useState(3);
   const [suggestionsEx, setSuggestionsEx] = useState<
     Array<{ type: string; description: string }>
   >([]);
@@ -320,10 +321,13 @@ export function AdminExercisesList({
   function handleGenerateWithAI() {
     setError("");
     setGeneratingAI(true);
-    const body: Record<string, unknown> = { types: generateTypes };
-    if (generateTypes.includes("CODE")) {
+    const body: Record<string, unknown> = {
+      types: generateTypes,
+      count: Math.min(15, Math.max(1, generateCount)),
+    };
+    if (generateTypes.includes("CODE") || generateTypes.includes("DESARROLLO")) {
       body.codeLanguage = generateCodeLanguage;
-      if (generateCodeDifficulty.trim()) {
+      if (generateTypes.includes("CODE") && generateCodeDifficulty.trim()) {
         body.codeDifficulty = generateCodeDifficulty.trim();
       }
     }
@@ -452,12 +456,21 @@ export function AdminExercisesList({
               />
               <span className="text-sm text-foreground">Código</span>
             </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={generateTypes.includes("DESARROLLO")}
+                onChange={() => toggleGenerateType("DESARROLLO")}
+                className="rounded border-border text-accent focus:ring-accent"
+              />
+              <span className="text-sm text-foreground">Desarrollo</span>
+            </label>
           </div>
-          {generateTypes.includes("CODE") && (
+          {(generateTypes.includes("CODE") || generateTypes.includes("DESARROLLO")) && (
             <>
               <div className="mt-2">
                 <span className="text-sm font-medium text-foreground">
-                  Lenguaje para ejercicios de código
+                  Lenguaje (código/desarrollo)
                 </span>
                 <select
                   value={generateCodeLanguage}
@@ -479,24 +492,44 @@ export function AdminExercisesList({
                   ))}
                 </select>
               </div>
-              <div className="mt-2">
-                <span className="text-sm font-medium text-foreground">
-                  Dificultad de los ejercicios de código
-                </span>
-                <select
-                  value={generateCodeDifficulty}
-                  onChange={(e) => setGenerateCodeDifficulty(e.target.value)}
-                  className="mt-1 block rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-                >
-                  {DIFFICULTY_OPTIONS.map((opt) => (
-                    <option key={opt.value || "empty"} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {generateTypes.includes("CODE") && (
+                <div className="mt-2">
+                  <span className="text-sm font-medium text-foreground">
+                    Dificultad de los ejercicios de código
+                  </span>
+                  <select
+                    value={generateCodeDifficulty}
+                    onChange={(e) => setGenerateCodeDifficulty(e.target.value)}
+                    className="mt-1 block rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                  >
+                    {DIFFICULTY_OPTIONS.map((opt) => (
+                      <option key={opt.value || "empty"} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </>
           )}
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-4">
+          <label className="flex items-center gap-2">
+            <span className="text-sm font-medium text-foreground">
+              Número de ejercicios:
+            </span>
+            <select
+              value={generateCount}
+              onChange={(e) => setGenerateCount(Number(e.target.value))}
+              className="rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+            >
+              {Array.from({ length: 15 }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           <button

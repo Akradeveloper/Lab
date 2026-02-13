@@ -229,9 +229,9 @@ export function AdminLessonsList({
           const exercisesBody: Record<string, unknown> = {
             types: aiExerciseTypes,
           };
-          if (aiExerciseTypes.includes("CODE")) {
+          if (aiExerciseTypes.includes("CODE") || aiExerciseTypes.includes("DESARROLLO")) {
             exercisesBody.codeLanguage = aiCodeLanguage;
-            if (aiDifficulty.trim()) {
+            if (aiExerciseTypes.includes("CODE") && aiDifficulty.trim()) {
               exercisesBody.codeDifficulty = aiDifficulty.trim();
             }
           }
@@ -521,12 +521,21 @@ export function AdminLessonsList({
                     />
                     <span className="text-sm text-foreground">Código</span>
                   </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={aiExerciseTypes.includes("DESARROLLO")}
+                      onChange={() => toggleAiExerciseType("DESARROLLO")}
+                      className="rounded border-border text-accent focus:ring-accent"
+                    />
+                    <span className="text-sm text-foreground">Desarrollo</span>
+                  </label>
                 </div>
-                {aiExerciseTypes.includes("CODE") && (
+                {(aiExerciseTypes.includes("CODE") || aiExerciseTypes.includes("DESARROLLO")) && (
                   <>
                     <div className="mt-2">
                       <span className="text-sm font-medium text-foreground">
-                        Lenguaje para ejercicios de código
+                        Lenguaje (código/desarrollo)
                       </span>
                       <select
                         value={aiCodeLanguage}
@@ -548,22 +557,24 @@ export function AdminLessonsList({
                         ))}
                       </select>
                     </div>
-                    <div className="mt-2">
-                      <span className="text-sm font-medium text-foreground">
-                        Dificultad de los ejercicios de código
-                      </span>
-                      <select
-                        value={aiDifficulty}
-                        onChange={(e) => setAiDifficulty(e.target.value)}
-                        className="mt-1 block rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-                      >
-                        {DIFFICULTY_OPTIONS.map((opt) => (
-                          <option key={opt.value || "empty"} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {aiExerciseTypes.includes("CODE") && (
+                      <div className="mt-2">
+                        <span className="text-sm font-medium text-foreground">
+                          Dificultad de los ejercicios de código
+                        </span>
+                        <select
+                          value={aiDifficulty}
+                          onChange={(e) => setAiDifficulty(e.target.value)}
+                          className="mt-1 block rounded border border-border bg-background px-3 py-2 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                        >
+                          {DIFFICULTY_OPTIONS.map((opt) => (
+                            <option key={opt.value || "empty"} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

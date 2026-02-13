@@ -40,7 +40,19 @@ type GeneratedExerciseCode = {
   difficulty?: string;
 };
 
-type GeneratedExercise = GeneratedExerciseMcTf | GeneratedExerciseCode;
+type GeneratedExerciseDesarrollo = {
+  type: "DESARROLLO";
+  question: string;
+  language: string;
+  immutablePrefix?: string;
+  immutableSuffix?: string;
+  editableTemplate: string;
+};
+
+type GeneratedExercise =
+  | GeneratedExerciseMcTf
+  | GeneratedExerciseCode
+  | GeneratedExerciseDesarrollo;
 
 function isCodeExercise(
   o: Record<string, unknown>,
@@ -67,10 +79,26 @@ function isCodeExercise(
   return true;
 }
 
+function isDesarrolloExercise(
+  o: Record<string, unknown>,
+): o is GeneratedExerciseDesarrollo {
+  if (o.type !== "DESARROLLO") return false;
+  if (typeof o.question !== "string" || !o.question.trim()) return false;
+  const lang = o.language;
+  if (
+    typeof lang !== "string" ||
+    !CODE_LANGUAGES.includes(lang as (typeof CODE_LANGUAGES)[number])
+  )
+    return false;
+  if (typeof o.editableTemplate !== "string") return false;
+  return true;
+}
+
 function isValidGenerated(ex: unknown): ex is GeneratedExercise {
   if (!ex || typeof ex !== "object") return false;
   const o = ex as Record<string, unknown>;
   if (o.type === "CODE") return isCodeExercise(o);
+  if (o.type === "DESARROLLO") return isDesarrolloExercise(o);
   if (o.type !== "MULTIPLE_CHOICE" && o.type !== "TRUE_FALSE") return false;
   if (typeof o.question !== "string" || !o.question.trim()) return false;
   if (o.type === "MULTIPLE_CHOICE") {
@@ -119,7 +147,7 @@ export async function POST(request: Request, { params }: Params) {
   try {
     const lesson = await prisma.lesson.findUnique({
       where: { id: lessonId },
-      select: { id: true, title: true, content: true },
+      select: { id: true, title: true, content: true, difficulty: true },
     });
     if (!lesson) {
       return NextResponse.json(
@@ -192,6 +220,7 @@ export async function POST(request: Request, { params }: Params) {
           : undefined,
       codeLanguage,
       codeDifficulty,
+      lessonDifficulty: lesson.difficulty ?? undefined,
     });
 
     const model = await getOpenAIModel();
@@ -237,12 +266,20 @@ export async function POST(request: Request, { params }: Params) {
       );
     }
 
+    const desarrolloList = valid.filter(
+      (ex) => (ex as { type: string }).type === "DESARROLLO",
+    );
+    const otherList = valid.filter(
+      (ex) => (ex as { type: string }).type !== "DESARROLLO",
+    );
+    const validCapped = [...otherList, ...desarrolloList.slice(0, 2)];
+
     const existingCount = await prisma.exercise.count({
       where: { lessonId },
     });
     const created = [];
-    for (let i = 0; i < valid.length; i++) {
-      const ex = valid[i];
+    for (let i = 0; i < validCapped.length; i++) {
+      const ex = validCapped[i];
       let optionsStr: string;
       let correctStr: string;
       let exerciseDifficulty: string | undefined;
@@ -279,6 +316,21 @@ export async function POST(request: Request, { params }: Params) {
         ) {
           exerciseDifficulty = ex.difficulty;
         }
+      } else if (ex.type === "DESARROLLO") {
+        const lang =
+          codeLanguage &&
+          (CODE_LANGUAGES as readonly string[]).includes(codeLanguage)
+            ? codeLanguage
+            : ex.language;
+        optionsStr = JSON.stringify({
+          language: lang,
+          immutablePrefix:
+            typeof ex.immutablePrefix === "string" ? ex.immutablePrefix : "",
+          immutableSuffix:
+            typeof ex.immutableSuffix === "string" ? ex.immutableSuffix : "",
+          editableTemplate: ex.editableTemplate,
+        });
+        correctStr = "";
       } else if (
         ex.type === "MULTIPLE_CHOICE" &&
         ex.options &&
@@ -301,7 +353,11 @@ export async function POST(request: Request, { params }: Params) {
       const exercise = await prisma.exercise.create({
         data: {
           lessonId,
-          type: ex.type as "MULTIPLE_CHOICE" | "TRUE_FALSE" | "CODE",
+          type: ex.type as
+            | "MULTIPLE_CHOICE"
+            | "TRUE_FALSE"
+            | "CODE"
+            | "DESARROLLO",
           question: ex.question.trim(),
           options: optionsStr,
           correctAnswer: correctStr,
