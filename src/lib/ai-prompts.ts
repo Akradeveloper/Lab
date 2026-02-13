@@ -266,6 +266,12 @@ export function buildExerciseUserPrompt(ctx: ExerciseContext): string {
     );
   }
 
+  if (ctx.allowedTypes?.includes("DESARROLLO")) {
+    parts.push(
+      'Si generas ejercicios de tipo DESARROLLO: usa solo lenguajes soportados por el sandbox (Python, JavaScript, TypeScript, Java con Selenium o Playwright). Las plantillas de código deben ser ejecutables en ese entorno.',
+    );
+  }
+
   parts.push(
     `Genera exactamente ${ctx.count} ejercicios. Responde con JSON: { "exercises": [ ... ] }`,
   );

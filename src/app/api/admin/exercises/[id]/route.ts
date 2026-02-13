@@ -33,6 +33,8 @@ export async function PUT(request: Request, { params }: Params) {
       if (typeof question !== "string" || !question.trim()) return badRequest("El enunciado no puede estar vacío");
       data.question = question.trim();
     }
+    const VALID_SANDBOX_LANGS = ["python", "javascript", "typescript", "java", "java-playwright"];
+
     if (options !== undefined) {
       if (typeof options === "string") {
         data.options = options;
@@ -42,6 +44,25 @@ export async function PUT(request: Request, { params }: Params) {
         data.options = JSON.stringify(options);
       } else {
         data.options = "[]";
+      }
+      const exType = type ?? body.type;
+      if (exType === "CODE" || exType === "DESARROLLO") {
+        let lang: string | undefined;
+        if (typeof options === "string") {
+          try {
+            const parsed = JSON.parse(options) as { language?: string };
+            lang = parsed?.language;
+          } catch {
+            lang = undefined;
+          }
+        } else if (options != null && typeof options === "object" && !Array.isArray(options)) {
+          lang = (options as { language?: string }).language;
+        }
+        if (lang != null && lang !== "" && !VALID_SANDBOX_LANGS.includes(lang)) {
+          return badRequest(
+            `Lenguaje no soportado por el sandbox. Usa: ${VALID_SANDBOX_LANGS.join(", ")}`
+          );
+        }
       }
     }
     if (correctAnswer !== undefined) {

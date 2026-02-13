@@ -85,6 +85,9 @@ export default async function AdminSubmoduleLessonExercisesPage({
         moduleId={moduleId}
         lessonId={lessonId}
         lessonTitle={lesson.title}
+        moduleTitle={mod.title}
+        submoduleTitle={sub.title}
+        lessonContent={lesson.content ?? ""}
       />
     </>
   );

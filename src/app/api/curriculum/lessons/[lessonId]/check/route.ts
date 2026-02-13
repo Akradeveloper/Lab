@@ -30,7 +30,17 @@ export async function POST(request: Request, { params }: Params) {
     let allCorrect = true;
 
     for (const ex of exercises) {
-      if (ex.type === "DESARROLLO") continue;
+      if (ex.type === "DESARROLLO") {
+        const payload = answers[ex.id];
+        const isRunSuccess =
+          payload != null &&
+          typeof payload === "object" &&
+          "__desarrolloRun" in payload &&
+          (payload as { exitCode?: number }).exitCode === 0;
+        results.push({ exerciseId: ex.id, correct: isRunSuccess });
+        if (!isRunSuccess) allCorrect = false;
+        continue;
+      }
 
       if (ex.type === "CODE") {
         const userCode =

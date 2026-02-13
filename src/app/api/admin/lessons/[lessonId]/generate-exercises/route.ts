@@ -132,7 +132,7 @@ export async function POST(request: Request, { params }: Params) {
       "default_exercise_count",
       DEFAULT_EXERCISE_COUNT
     );
-    const ALLOWED_TYPES = ["MULTIPLE_CHOICE", "TRUE_FALSE", "CODE"] as const;
+    const ALLOWED_TYPES = ["MULTIPLE_CHOICE", "TRUE_FALSE", "CODE", "DESARROLLO"] as const;
     let count = defaultCount;
     let allowedTypes: string[] = [...ALLOWED_TYPES];
     let codeLanguage: string | undefined;

@@ -75,6 +75,8 @@ export default async function AdminLessonExercisesPage({ params }: Props) {
         moduleId={moduleId}
         lessonId={lessonId}
         lessonTitle={lesson.title}
+        moduleTitle={mod.title}
+        lessonContent={lesson.content ?? ""}
       />
     </>
   );

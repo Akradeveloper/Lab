@@ -48,7 +48,9 @@ async function runCode(language, code, stdin = "") {
     return { stdout: "", stderr: `Lenguaje no soportado: ${language}`, exitCode: 1, timedOut: false };
   }
 
-  const dir = await mkdtemp(join(tmpdir(), "run-"));
+  const dir = config.isCypress
+    ? await mkdtemp(join(APP_ROOT, "run-"))
+    : await mkdtemp(join(tmpdir(), "run-"));
   try {
     if (config.isJava) {
       const javaFile = join(dir, "Main.java");

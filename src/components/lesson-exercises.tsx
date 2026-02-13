@@ -8,9 +8,19 @@ import { useToast } from "@/components/toast";
 type Exercise =
   | {
       id: string;
-      type: "MULTIPLE_CHOICE" | "TRUE_FALSE" | "DESARROLLO";
+      type: "MULTIPLE_CHOICE" | "TRUE_FALSE";
       question: string;
       options: string[];
+      order: number;
+    }
+  | {
+      id: string;
+      type: "DESARROLLO";
+      question: string;
+      language: string;
+      template: string;
+      immutablePrefix?: string;
+      immutableSuffix?: string;
       order: number;
     }
   | {
@@ -75,9 +85,49 @@ export function LessonExercises({
   const [hints, setHints] = useState<Record<string, string>>({});
   const [loadingHint, setLoadingHint] = useState<Record<string, boolean>>({});
 
+  // Ejecución de ejercicios DESARROLLO (run result por ejercicio)
+  const [runResult, setRunResult] = useState<Record<string, { stdout: string; stderr: string; exitCode: number } | null>>({});
+  const [runLoading, setRunLoading] = useState<Record<string, boolean>>({});
+
   function setAnswer(exerciseId: string, value: unknown) {
     setAnswers((prev) => ({ ...prev, [exerciseId]: value }));
     setCheckResult(null);
+  }
+
+  /** Ejecutar código de un ejercicio DESARROLLO en el sandbox */
+  async function runDesarrolloCode(
+    exerciseId: string,
+    lessonId: string,
+    code: string,
+    language: string
+  ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+    const res = await fetch("/api/code/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ exerciseId, lessonId, code, language }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error ?? "Error al enviar el código");
+    const jobId = data.jobId;
+    if (!jobId) throw new Error("No se recibió jobId");
+
+    const poll = async (): Promise<{ stdout: string; stderr: string; exitCode: number }> => {
+      await fetch("/api/internal/process-queue", { method: "POST", credentials: "include" });
+      const jobRes = await fetch(`/api/code/jobs/${jobId}`, { credentials: "include" });
+      if (!jobRes.ok) return { stdout: "", stderr: "Error al obtener resultado", exitCode: 1 };
+      const job = await jobRes.json();
+      if (job.status === "COMPLETED" || job.status === "FAILED") {
+        return {
+          stdout: job.stdout ?? "",
+          stderr: job.stderr ?? "",
+          exitCode: job.exitCode ?? 1,
+        };
+      }
+      await new Promise((r) => setTimeout(r, 800));
+      return poll();
+    };
+    return poll();
   }
 
   /** Solicitar pista para un ejercicio */
@@ -115,6 +165,15 @@ export function LessonExercises({
     for (const e of exercises) {
       if (e.type === "CODE" && bodyAnswers[e.id] === undefined && e.template.trim() !== "") {
         bodyAnswers[e.id] = e.template;
+      }
+      if (e.type === "DESARROLLO") {
+        const code = (e.immutablePrefix ?? "") + String(bodyAnswers[e.id] ?? e.template) + (e.immutableSuffix ?? "");
+        try {
+          const result = await runDesarrolloCode(e.id, lessonId, code, e.language);
+          bodyAnswers[e.id] = { __desarrolloRun: true, exitCode: result.exitCode };
+        } catch {
+          bodyAnswers[e.id] = { __desarrolloRun: true, exitCode: 1 };
+        }
       }
     }
     try {
@@ -331,10 +390,114 @@ export function LessonExercises({
             <p className="mb-3 font-medium text-foreground">{ex.question}</p>
 
             {ex.type === "DESARROLLO" && (
-              <p className="text-sm text-muted">
-                Ejercicio de desarrollo (próximamente). Este ejercicio se
-                evaluará en una futura versión.
-              </p>
+              <div className="mt-2 space-y-3">
+                <p className="text-sm text-muted">
+                  Completa el código y ejecútalo. Se considerará correcto si se
+                  ejecuta sin errores (exit code 0).
+                </p>
+                {ex.immutablePrefix != null && ex.immutablePrefix.trim() !== "" && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                      Código base (solo lectura)
+                    </span>
+                    <CodeEditor
+                      language={ex.language}
+                      value={ex.immutablePrefix}
+                      readOnly
+                      height="120px"
+                    />
+                  </div>
+                )}
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                    Tu código
+                  </span>
+                  <CodeEditor
+                    language={ex.language}
+                    value={
+                      answers[ex.id] !== undefined
+                        ? String(answers[ex.id])
+                        : ex.template
+                    }
+                    onChange={(val) => setAnswer(ex.id, val)}
+                    height="300px"
+                  />
+                </div>
+                {ex.immutableSuffix != null && ex.immutableSuffix.trim() !== "" && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                      Código final (solo lectura)
+                    </span>
+                    <CodeEditor
+                      language={ex.language}
+                      value={ex.immutableSuffix}
+                      readOnly
+                      height="120px"
+                    />
+                  </div>
+                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={runLoading[ex.id]}
+                    onClick={async () => {
+                      setRunLoading((prev) => ({ ...prev, [ex.id]: true }));
+                      setRunResult((prev) => ({ ...prev, [ex.id]: null }));
+                      try {
+                        const code =
+                          (ex.immutablePrefix ?? "") +
+                          String(answers[ex.id] ?? ex.template) +
+                          (ex.immutableSuffix ?? "");
+                        const result = await runDesarrolloCode(
+                          ex.id,
+                          lessonId,
+                          code,
+                          ex.language
+                        );
+                        setRunResult((prev) => ({ ...prev, [ex.id]: result }));
+                      } catch (err) {
+                        setRunResult((prev) => ({
+                          ...prev,
+                          [ex.id]: {
+                            stdout: "",
+                            stderr: err instanceof Error ? err.message : "Error al ejecutar",
+                            exitCode: 1,
+                          },
+                        }));
+                      } finally {
+                        setRunLoading((prev) => ({ ...prev, [ex.id]: false }));
+                      }
+                    }}
+                    className="rounded bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition-colors hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  >
+                    {runLoading[ex.id] ? "Ejecutando…" : "Ejecutar"}
+                  </button>
+                </div>
+                {(() => {
+                  const result = runResult[ex.id];
+                  if (result == null) return null;
+                  return (
+                    <div className="rounded border border-border bg-background p-3 font-mono text-sm">
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted">
+                        Salida (exit code: {result.exitCode})
+                      </p>
+                      {result.stdout && (
+                        <pre className="whitespace-pre-wrap wrap-break-word text-foreground">
+                          {result.stdout}
+                        </pre>
+                      )}
+                      {result.stderr && (
+                        <pre className="mt-1 whitespace-pre-wrap wrap-break-word text-error">
+                          {result.stderr}
+                        </pre>
+                      )}
+                      {!result.stdout && !result.stderr && (
+                        <p className="text-muted">Sin salida.</p>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
             )}
 
             {ex.type === "CODE" && (

@@ -14,12 +14,22 @@ type ExerciseItem = {
   createdAt: string;
 };
 
-type Props = { moduleId: string; lessonId: string; lessonTitle: string };
+type Props = {
+  moduleId: string;
+  lessonId: string;
+  lessonTitle: string;
+  moduleTitle?: string;
+  submoduleTitle?: string;
+  lessonContent?: string;
+};
 
 export function AdminExercisesList({
   moduleId: _moduleId,
   lessonId,
   lessonTitle: _lessonTitle,
+  moduleTitle,
+  submoduleTitle,
+  lessonContent = "",
 }: Props) {
   const [exercises, setExercises] = useState<ExerciseItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +68,7 @@ export function AdminExercisesList({
     Array<{ type: string; description: string }>
   >([]);
   const [loadingSuggestionsEx, setLoadingSuggestionsEx] = useState(false);
+  const [contextExpanded, setContextExpanded] = useState(false);
 
   const DIFFICULTY_OPTIONS = [
     { value: "", label: "Sin asignar" },
@@ -375,12 +386,36 @@ export function AdminExercisesList({
     );
   }
 
+  const contextVisible = moduleTitle != null || (lessonContent != null && lessonContent.trim() !== "");
+  const lessonContentExtract = lessonContent.trim().slice(0, 1500);
+  const lessonContentHasMore = lessonContent.trim().length > 1500;
+
   return (
     <div className="space-y-4">
       {error && (
         <p className="rounded border border-error bg-error-bg px-4 py-2 text-sm text-error">
           {error}
         </p>
+      )}
+      {contextVisible && (
+        <details
+          className="rounded border border-border bg-surface/50 px-3 py-2"
+          open={contextExpanded}
+          onToggle={(e) => setContextExpanded((e.target as HTMLDetailsElement).open)}
+        >
+          <summary className="cursor-pointer text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded">
+            Contexto: {moduleTitle ?? "—"}
+            {submoduleTitle != null && ` / ${submoduleTitle}`} / {_lessonTitle}
+          </summary>
+          {lessonContent.trim() !== "" && (
+            <div className="mt-2 rounded border border-border bg-background p-3 text-sm text-muted whitespace-pre-wrap">
+              {contextExpanded ? lessonContent : lessonContentExtract}
+              {!contextExpanded && lessonContentHasMore && (
+                <p className="mt-2 text-accent">… (amplía para ver contenido completo)</p>
+              )}
+            </div>
+          )}
+        </details>
       )}
       <div className="space-y-3">
         <div className="rounded border border-border bg-surface/50 px-3 py-2">
@@ -560,6 +595,9 @@ export function AdminExercisesList({
                   El alumno solo podrá editar la parte &quot;Plantilla editable&quot;.
                   El código inmutable (inicio y/o final) se concatena en el servidor al ejecutar.
                 </p>
+                <p className="rounded border border-border bg-muted/30 px-3 py-2 text-sm text-muted">
+                  Lenguajes soportados por el sandbox: Python, JavaScript, TypeScript, Java (Selenium o Playwright). Usa solo estos para que la ejecución funcione.
+                </p>
                 <label className="block">
                   <span className="text-sm font-medium text-foreground">
                     Lenguaje por defecto
@@ -625,6 +663,9 @@ export function AdminExercisesList({
                   El enunciado debe describir la tarea. Si defines código inmutable,
                   el alumno solo verá y editará la plantilla; la solución se compara
                   solo con la parte editable.
+                </p>
+                <p className="rounded border border-border bg-muted/30 px-3 py-2 text-sm text-muted">
+                  Lenguajes soportados por el sandbox: Python, JavaScript, TypeScript, Java (Selenium o Playwright). Usa solo estos para que la ejecución funcione.
                 </p>
                 <label className="block">
                   <span className="text-sm font-medium text-foreground">

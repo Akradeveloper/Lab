@@ -84,7 +84,17 @@ export default async function LessonPage({ params }: Props) {
 
   const exercisesForClient = lesson.exercises.map((e) => {
     if (e.type === "DESARROLLO") {
-      return { id: e.id, type: "DESARROLLO" as const, question: e.question, options: [] as string[], order: e.order };
+      const devOpts = parseDevOptions(e.options);
+      return {
+        id: e.id,
+        type: "DESARROLLO" as const,
+        question: e.question,
+        language: devOpts.language,
+        immutablePrefix: devOpts.immutablePrefix,
+        immutableSuffix: devOpts.immutableSuffix,
+        template: devOpts.editableTemplate,
+        order: e.order,
+      };
     }
     if (e.type === "CODE") {
       const codeOpts = parseCodeOptions(e.options);
@@ -219,9 +229,9 @@ export default async function LessonPage({ params }: Props) {
   });
   const completedIds = new Set(userProgress.map((p) => p.lessonId));
 
-  const hasCodeExercises = exercisesForClient.some((e) => e.type === "CODE");
-  const codeExercises = exercisesForClient.filter((e) => e.type === "CODE");
-  const nonCodeExercises = exercisesForClient.filter((e) => e.type !== "CODE");
+  const hasCodeOrDevExercises = exercisesForClient.some((e) => e.type === "CODE" || e.type === "DESARROLLO");
+  const codeAndDevExercises = exercisesForClient.filter((e) => e.type === "CODE" || e.type === "DESARROLLO");
+  const nonCodeExercises = exercisesForClient.filter((e) => e.type !== "CODE" && e.type !== "DESARROLLO");
 
   const breadcrumbNav = (
     <Breadcrumbs
@@ -245,7 +255,7 @@ export default async function LessonPage({ params }: Props) {
           moduleId={moduleId}
         />
         <main id="main-content" className="min-w-0 flex-1">
-          {hasCodeExercises ? (
+          {hasCodeOrDevExercises ? (
             <>
               <div className="px-4 pt-8 lg:px-8">
                 {breadcrumbNav}
@@ -288,7 +298,7 @@ export default async function LessonPage({ params }: Props) {
                   <LessonExercises
                     moduleId={moduleId}
                     lessonId={lessonId}
-                    exercises={codeExercises}
+                    exercises={codeAndDevExercises}
                     isProjectLesson={(lesson.lessonType ?? "standard") === "project"}
                     nextLesson={nextLesson}
                     prevLesson={prevLesson}
@@ -342,6 +352,30 @@ function parseOptions(options: string): string[] {
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
+  }
+}
+
+function parseDevOptions(options: string): {
+  language: string;
+  immutablePrefix: string;
+  immutableSuffix: string;
+  editableTemplate: string;
+} {
+  try {
+    const parsed = JSON.parse(options) as Record<string, unknown>;
+    return {
+      language: typeof parsed?.language === "string" ? parsed.language : "javascript",
+      immutablePrefix: typeof parsed?.immutablePrefix === "string" ? parsed.immutablePrefix : "",
+      immutableSuffix: typeof parsed?.immutableSuffix === "string" ? parsed.immutableSuffix : "",
+      editableTemplate: typeof parsed?.editableTemplate === "string" ? parsed.editableTemplate : "",
+    };
+  } catch {
+    return {
+      language: "javascript",
+      immutablePrefix: "",
+      immutableSuffix: "",
+      editableTemplate: "",
+    };
   }
 }
 

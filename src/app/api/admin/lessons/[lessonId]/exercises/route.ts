@@ -49,6 +49,8 @@ export async function POST(request: Request, { params }: Params) {
       return badRequest("El enunciado es obligatorio");
     }
 
+    const VALID_SANDBOX_LANGS = ["python", "javascript", "typescript", "java", "java-playwright"];
+
     let optionsStr: string;
     let correctStr: string;
     if (type === "CODE") {
@@ -61,8 +63,14 @@ export async function POST(request: Request, { params }: Params) {
             immutableSuffix?: string;
           }
         : {};
+      const codeLang = typeof codeOpts.language === "string" ? codeOpts.language : "javascript";
+      if (!VALID_SANDBOX_LANGS.includes(codeLang)) {
+        return badRequest(
+          `Lenguaje no soportado por el sandbox. Usa: ${VALID_SANDBOX_LANGS.join(", ")}`
+        );
+      }
       optionsStr = JSON.stringify({
-        language: typeof codeOpts.language === "string" ? codeOpts.language : "javascript",
+        language: codeLang,
         template: typeof codeOpts.template === "string" ? codeOpts.template : "",
         testCases: Array.isArray(codeOpts.testCases) ? codeOpts.testCases : [],
         immutablePrefix: typeof codeOpts.immutablePrefix === "string" ? codeOpts.immutablePrefix : "",
@@ -79,8 +87,14 @@ export async function POST(request: Request, { params }: Params) {
             editableTemplate?: string;
           }
         : {};
+      const devLang = typeof devOpts.language === "string" ? devOpts.language : "javascript";
+      if (!VALID_SANDBOX_LANGS.includes(devLang)) {
+        return badRequest(
+          `Lenguaje no soportado por el sandbox. Usa: ${VALID_SANDBOX_LANGS.join(", ")}`
+        );
+      }
       optionsStr = JSON.stringify({
-        language: typeof devOpts.language === "string" ? devOpts.language : "",
+        language: devLang,
         immutablePrefix: typeof devOpts.immutablePrefix === "string" ? devOpts.immutablePrefix : "",
         immutableSuffix: typeof devOpts.immutableSuffix === "string" ? devOpts.immutableSuffix : "",
         editableTemplate: typeof devOpts.editableTemplate === "string" ? devOpts.editableTemplate : "",
